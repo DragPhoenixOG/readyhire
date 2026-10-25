@@ -46,7 +46,8 @@ const schema = z
       if (!env.S3_ACCESS_KEY_ID) issue("S3_ACCESS_KEY_ID", "is required when STORAGE_DRIVER=s3");
       if (!env.S3_SECRET_ACCESS_KEY) issue("S3_SECRET_ACCESS_KEY", "is required when STORAGE_DRIVER=s3");
     }
-    if (env.EMAIL_DRIVER === "resend" && !env.RESEND_API_KEY) issue("RESEND_API_KEY", "is required when EMAIL_DRIVER=resend");
+    if (env.EMAIL_DRIVER === "resend" && !env.RESEND_API_KEY)
+      issue("RESEND_API_KEY", "is required when EMAIL_DRIVER=resend");
     if (env.EMAIL_DRIVER === "smtp" && !env.SMTP_URL) issue("SMTP_URL", "is required when EMAIL_DRIVER=smtp");
 
     if (env.APP_ENV === "production" || env.APP_ENV === "staging") {
@@ -73,7 +74,10 @@ export function getEnv(): Env {
   if (cached) return cached;
   // Treat empty variables (common in .env files and dashboards) as unset.
   const raw = Object.fromEntries(Object.entries(process.env).filter(([, value]) => value !== ""));
-  const result = schema.safeParse({ ...raw, APP_ENV: raw.APP_ENV ?? defaultAppEnv() });
+  const result = schema.safeParse({
+    ...raw,
+    APP_ENV: raw.APP_ENV ?? defaultAppEnv(),
+  });
   if (!result.success) {
     const problems = result.error.issues.map((i) => `  - ${i.path.join(".")}: ${i.message}`).join("\n");
     throw new Error(`Invalid Readyhire configuration:\n${problems}\nSee .env.example.`);

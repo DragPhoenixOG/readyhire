@@ -3,7 +3,18 @@ import Link from "next/link";
 import { setUserFlag, setUserRestriction } from "@/actions/admin";
 import { ActionForm } from "@/components/action-form";
 import { Disclosure } from "@/components/disclosure";
-import { Badge, Card, EmptyState, PageHeader, Table, Td, buttonClass, cx, inlineInputClass, inputClass } from "@/components/ui";
+import {
+  Badge,
+  Card,
+  EmptyState,
+  PageHeader,
+  Table,
+  Td,
+  buttonClass,
+  cx,
+  inlineInputClass,
+  inputClass,
+} from "@/components/ui";
 import type { Prisma } from "@/generated/prisma/client";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -29,11 +40,18 @@ export default async function AdminUsersPage({ searchParams }: PageProps<"/admin
     ...(filter === "CANDIDATE" || filter === "RECRUITER" ? { role: filter } : {}),
     ...(filter === "flagged" ? { flagged: true } : {}),
     ...(filter === "restricted" ? { status: "RESTRICTED" } : {}),
-    ...(q ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { email: { contains: q, mode: "insensitive" } }] } : {}),
+    ...(q
+      ? {
+          OR: [{ name: { contains: q, mode: "insensitive" } }, { email: { contains: q, mode: "insensitive" } }],
+        }
+      : {}),
   };
   const users = await db.user.findMany({
     where,
-    include: { candidate: { select: { id: true } }, recruiter: { include: { company: { select: { name: true } } } } },
+    include: {
+      candidate: { select: { id: true } },
+      recruiter: { include: { company: { select: { name: true } } } },
+    },
     orderBy: { createdAt: "desc" },
     take: 200,
   });
@@ -50,7 +68,9 @@ export default async function AdminUsersPage({ searchParams }: PageProps<"/admin
               aria-current={f.key === filter ? "page" : undefined}
               className={cx(
                 "rounded-full px-3 py-1.5 text-sm font-medium ring-1 ring-inset",
-                f.key === filter ? "bg-brand-700 text-white ring-brand-700" : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50",
+                f.key === filter
+                  ? "bg-brand-700 text-white ring-brand-700"
+                  : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50",
               )}
             >
               {f.label}
@@ -59,7 +79,13 @@ export default async function AdminUsersPage({ searchParams }: PageProps<"/admin
         </nav>
         <form className="flex gap-2" role="search">
           {filter && <input type="hidden" name="filter" value={filter} />}
-          <input name="q" defaultValue={q} placeholder="Name or email" aria-label="Search users" className={`${inlineInputClass} w-56`} />
+          <input
+            name="q"
+            defaultValue={q}
+            placeholder="Name or email"
+            aria-label="Search users"
+            className={`${inlineInputClass} w-56`}
+          />
           <button type="submit" className={buttonClass("secondary")}>
             Search
           </button>
@@ -75,7 +101,10 @@ export default async function AdminUsersPage({ searchParams }: PageProps<"/admin
               <tr key={u.id}>
                 <Td>
                   {u.candidate ? (
-                    <Link href={`/admin/verifications/${u.candidate.id}`} className="font-medium text-slate-900 hover:underline">
+                    <Link
+                      href={`/admin/verifications/${u.candidate.id}`}
+                      className="font-medium text-slate-900 hover:underline"
+                    >
                       {u.name}
                     </Link>
                   ) : (
@@ -90,7 +119,11 @@ export default async function AdminUsersPage({ searchParams }: PageProps<"/admin
                 <Td className="whitespace-nowrap">{formatDate(u.createdAt)}</Td>
                 <Td>
                   <div className="flex flex-col items-start gap-1">
-                    {u.status === "RESTRICTED" ? <Badge tone="red">Restricted</Badge> : <Badge tone="green">Active</Badge>}
+                    {u.status === "RESTRICTED" ? (
+                      <Badge tone="red">Restricted</Badge>
+                    ) : (
+                      <Badge tone="green">Active</Badge>
+                    )}
                     {u.flagged && <Badge tone="amber">Flagged</Badge>}
                     {(u.restrictedReason || u.flagReason) && (
                       <p className="max-w-56 text-xs text-slate-500">{u.restrictedReason ?? u.flagReason}</p>
@@ -103,13 +136,30 @@ export default async function AdminUsersPage({ searchParams }: PageProps<"/admin
                   ) : (
                     <div className="flex flex-wrap gap-2">
                       <Disclosure summary={u.flagged ? "Remove flag" : "Flag"}>
-                        <ActionForm action={setUserFlag} submitLabel={u.flagged ? "Remove flag" : "Flag user"} size="sm" variant="secondary" className="space-y-2">
+                        <ActionForm
+                          action={setUserFlag}
+                          submitLabel={u.flagged ? "Remove flag" : "Flag user"}
+                          size="sm"
+                          variant="secondary"
+                          className="space-y-2"
+                        >
                           <input type="hidden" name="userId" value={u.id} />
                           <input type="hidden" name="flagged" value={u.flagged ? "false" : "true"} />
-                          {!u.flagged && <input name="reason" required placeholder="Reason" aria-label="Flag reason" className={inputClass} />}
+                          {!u.flagged && (
+                            <input
+                              name="reason"
+                              required
+                              placeholder="Reason"
+                              aria-label="Flag reason"
+                              className={inputClass}
+                            />
+                          )}
                         </ActionForm>
                       </Disclosure>
-                      <Disclosure summary={u.status === "RESTRICTED" ? "Lift restriction" : "Restrict"} tone={u.status === "RESTRICTED" ? "secondary" : "danger"}>
+                      <Disclosure
+                        summary={u.status === "RESTRICTED" ? "Lift restriction" : "Restrict"}
+                        tone={u.status === "RESTRICTED" ? "secondary" : "danger"}
+                      >
                         <ActionForm
                           action={setUserRestriction}
                           submitLabel={u.status === "RESTRICTED" ? "Lift restriction" : "Restrict user"}
@@ -120,7 +170,13 @@ export default async function AdminUsersPage({ searchParams }: PageProps<"/admin
                           <input type="hidden" name="userId" value={u.id} />
                           <input type="hidden" name="restrict" value={u.status === "RESTRICTED" ? "false" : "true"} />
                           {u.status !== "RESTRICTED" && (
-                            <input name="reason" required placeholder="Reason" aria-label="Restriction reason" className={inputClass} />
+                            <input
+                              name="reason"
+                              required
+                              placeholder="Reason"
+                              aria-label="Restriction reason"
+                              className={inputClass}
+                            />
                           )}
                         </ActionForm>
                       </Disclosure>

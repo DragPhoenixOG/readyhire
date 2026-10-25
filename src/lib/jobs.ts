@@ -18,11 +18,17 @@ export function responseDueAt(appliedAt: Date) {
 export function overdueWhere(now = new Date()) {
   return {
     status: "APPLIED",
-    createdAt: { lt: new Date(now.getTime() - RESPONSE_SLA_HOURS * 60 * 60 * 1000) },
+    createdAt: {
+      lt: new Date(now.getTime() - RESPONSE_SLA_HOURS * 60 * 60 * 1000),
+    },
   } satisfies Prisma.ApplicationWhereInput;
 }
 
-type ResponseFacts = { status: ApplicationStatus; createdAt: Date; respondedAt: Date | null };
+type ResponseFacts = {
+  status: ApplicationStatus;
+  createdAt: Date;
+  respondedAt: Date | null;
+};
 
 /**
  * Response discipline for a set of applications. The rate is answered / (answered + still waiting);

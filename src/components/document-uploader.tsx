@@ -52,25 +52,59 @@ export function DocumentUploader({
 
     setState({ status: "uploading", progress: 0 });
     try {
-      const prepared = await prepareDocumentUpload({ target, fileName: file.name, contentType: file.type, size: file.size });
+      const prepared = await prepareDocumentUpload({
+        target,
+        fileName: file.name,
+        contentType: file.type,
+        size: file.size,
+      });
       if (!prepared.ok) return setState({ status: "error", message: prepared.error });
       await putFile(prepared.upload, file, (progress) => setState({ status: "uploading", progress }));
       const result = await completeDocumentUpload(prepared.ticket);
-      if (!result.ok) return setState({ status: "error", message: result.error ?? "Upload failed." });
+      if (!result.ok)
+        return setState({
+          status: "error",
+          message: result.error ?? "Upload failed.",
+        });
       setState({ status: "done", message: result.message ?? "Uploaded." });
       if (inputRef.current) inputRef.current.value = "";
       router.refresh();
     } catch {
-      setState({ status: "error", message: "The upload didn't go through. Check your connection and try again." });
+      setState({
+        status: "error",
+        message: "The upload didn't go through. Check your connection and try again.",
+      });
     }
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-2" onChange={() => state.status !== "uploading" && setState({ status: "idle" })}>
-      <input ref={inputRef} type="file" name="file" required accept={UPLOAD_ACCEPT} aria-label={label} disabled={busy} className={fileInputClass} />
+    <form
+      onSubmit={onSubmit}
+      className="space-y-2"
+      onChange={() => state.status !== "uploading" && setState({ status: "idle" })}
+    >
+      <input
+        ref={inputRef}
+        type="file"
+        name="file"
+        required
+        accept={UPLOAD_ACCEPT}
+        aria-label={label}
+        disabled={busy}
+        className={fileInputClass}
+      />
       {state.status === "uploading" && (
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200" role="progressbar" aria-valuenow={Math.round(state.progress * 100)} aria-valuemin={0} aria-valuemax={100}>
-          <div className="h-full bg-brand-600 transition-[width]" style={{ width: `${Math.max(5, state.progress * 100)}%` }} />
+        <div
+          className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200"
+          role="progressbar"
+          aria-valuenow={Math.round(state.progress * 100)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        >
+          <div
+            className="h-full bg-brand-600 transition-[width]"
+            style={{ width: `${Math.max(5, state.progress * 100)}%` }}
+          />
         </div>
       )}
       {state.status === "error" && (
@@ -79,7 +113,10 @@ export function DocumentUploader({
         </p>
       )}
       {state.status === "done" && (
-        <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+        <p
+          role="status"
+          className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800"
+        >
           {state.message}
         </p>
       )}

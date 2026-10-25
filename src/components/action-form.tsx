@@ -58,12 +58,7 @@ export function ActionForm({
   }
 
   return (
-    <form
-      ref={formRef}
-      onSubmit={onSubmit}
-      onChange={() => setDismissed(true)}
-      className={cx("space-y-4", className)}
-    >
+    <form ref={formRef} onSubmit={onSubmit} onChange={() => setDismissed(true)} className={cx("space-y-4", className)}>
       {children}
       {!dismissed && state.error && (
         <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
@@ -71,7 +66,10 @@ export function ActionForm({
         </p>
       )}
       {!dismissed && state.ok && state.message && (
-        <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+        <p
+          role="status"
+          className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800"
+        >
           {state.message}
         </p>
       )}

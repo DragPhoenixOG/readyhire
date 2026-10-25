@@ -12,11 +12,11 @@ export default async function PublicLayout({ children }: LayoutProps<"/">) {
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <Logo />
           <nav className="flex items-center gap-2">
-            {user ? (
+            {user?.emailVerifiedAt ? (
               <Link href={homePathFor(user.role)} className={buttonClass("primary", "sm")}>
                 Go to dashboard
               </Link>
-            ) : (
+            ) : user ? null : (
               <>
                 <Link href="/login" className={buttonClass("ghost", "sm")}>
                   Sign in

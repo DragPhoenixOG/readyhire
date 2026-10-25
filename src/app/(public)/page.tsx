@@ -17,12 +17,30 @@ const recruiterSteps = [
 ];
 
 const capabilities = [
-  { title: "Verified notice period", body: "Resignation and notice-policy proof are checked before any profile is listed." },
-  { title: "Offer-shopping visibility", body: "Every profile shows how many active offers the candidate currently holds." },
-  { title: "Single-role commitment", body: "Candidates can commit to one role at a time; releases are tracked." },
-  { title: "Company-domain recruiters", body: "Recruiters onboard with an official company domain and admin approval." },
-  { title: "Mandatory responses", body: "Recruiters accept or reject every application with a reason, within 72 hours." },
-  { title: "Joining outcomes", body: "Interviews, offers and joined / not-joined status are tracked end to end." },
+  {
+    title: "Verified notice period",
+    body: "Resignation and notice-policy proof are checked before any profile is listed.",
+  },
+  {
+    title: "Offer-shopping visibility",
+    body: "Every profile shows how many active offers the candidate currently holds.",
+  },
+  {
+    title: "Single-role commitment",
+    body: "Candidates can commit to one role at a time; releases are tracked.",
+  },
+  {
+    title: "Company-domain recruiters",
+    body: "Recruiters onboard with an official company domain and admin approval.",
+  },
+  {
+    title: "Mandatory responses",
+    body: "Recruiters accept or reject every application with a reason, within 72 hours.",
+  },
+  {
+    title: "Joining outcomes",
+    body: "Interviews, offers and joined / not-joined status are tracked end to end.",
+  },
 ];
 
 export default function LandingPage() {
@@ -58,7 +76,9 @@ export default function LandingPage() {
 
       <section className="border-t border-slate-200 bg-white">
         <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
-          <h2 className="text-2xl font-semibold tracking-tight text-slate-900">What makes a Readyhire listing trustworthy</h2>
+          <h2 className="text-2xl font-semibold tracking-tight text-slate-900">
+            What makes a Readyhire listing trustworthy
+          </h2>
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {capabilities.map((c) => (
               <div key={c.title} className="rounded-xl border border-slate-200 p-5">

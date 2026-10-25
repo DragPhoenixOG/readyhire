@@ -76,7 +76,10 @@ export async function saveNoticeDetails(_: ActionState, formData: FormData): Pro
   const parsed = parseForm(noticeSchema, formData);
   if (!parsed.ok) return fail(parsed.error);
 
-  await db.candidateProfile.update({ where: { id: profile.id }, data: parsed.data });
+  await db.candidateProfile.update({
+    where: { id: profile.id },
+    data: parsed.data,
+  });
   refresh();
   return done("Notice details saved.");
 }
@@ -104,7 +107,11 @@ export async function submitForVerification(): Promise<ActionState> {
 
   await db.candidateProfile.update({
     where: { id: profile.id },
-    data: { verificationStatus: "PENDING", submittedAt: new Date(), rejectionReason: null },
+    data: {
+      verificationStatus: "PENDING",
+      submittedAt: new Date(),
+      rejectionReason: null,
+    },
   });
   refresh();
   return done("Submitted. The Readyhire team will review your documents shortly.");
@@ -117,7 +124,11 @@ export async function reopenVerification(): Promise<ActionState> {
 
   await db.candidateProfile.update({
     where: { id: profile.id },
-    data: { verificationStatus: "NOT_SUBMITTED", verifiedAt: null, submittedAt: null },
+    data: {
+      verificationStatus: "NOT_SUBMITTED",
+      verifiedAt: null,
+      submittedAt: null,
+    },
   });
   refresh();
   return done("Verification reopened. Update your details and submit again.");
@@ -131,7 +142,9 @@ const offerSchema = z.object({
   ctcLpa: zOptionalNumber("CTC", 0, 500),
   offeredOn: zOptionalDate("Offer date"),
   joiningDate: zOptionalDate("Joining date"),
-  status: z.enum(["HOLDING", "ACCEPTED", "DECLINED", "EXPIRED"], { error: "Choose the offer status." }),
+  status: z.enum(["HOLDING", "ACCEPTED", "DECLINED", "EXPIRED"], {
+    error: "Choose the offer status.",
+  }),
 });
 
 export async function addOffer(_: ActionState, formData: FormData): Promise<ActionState> {
@@ -181,18 +194,32 @@ export async function applyToJob(_: ActionState, formData: FormData): Promise<Ac
   if (profile.committedApplicationId) {
     return fail("You're committed to another role. Release that commitment before applying elsewhere.");
   }
-  const joined = await db.application.findFirst({ where: { candidateId: profile.id, status: "JOINED" } });
+  const joined = await db.application.findFirst({
+    where: { candidateId: profile.id, status: "JOINED" },
+  });
   if (joined) return fail("You've already joined a company through Readyhire.");
 
-  const job = await db.job.findUnique({ where: { id: jobId }, include: { recruiter: { include: { user: true } } } });
-  if (!job || job.status !== "OPEN" || job.recruiter.approvalStatus !== "APPROVED" || job.recruiter.user.status !== "ACTIVE") {
+  const job = await db.job.findUnique({
+    where: { id: jobId },
+    include: { recruiter: { include: { user: true } } },
+  });
+  if (
+    !job ||
+    job.status !== "OPEN" ||
+    job.recruiter.approvalStatus !== "APPROVED" ||
+    job.recruiter.user.status !== "ACTIVE"
+  ) {
     return fail("This job is no longer accepting applications.");
   }
-  const existing = await db.application.findUnique({ where: { jobId_candidateId: { jobId, candidateId: profile.id } } });
+  const existing = await db.application.findUnique({
+    where: { jobId_candidateId: { jobId, candidateId: profile.id } },
+  });
   if (existing) return fail("You've already applied to this job.");
 
   const application = await db.$transaction(async (tx) => {
-    const created = await tx.application.create({ data: { jobId, candidateId: profile.id, coverNote } });
+    const created = await tx.application.create({
+      data: { jobId, candidateId: profile.id, coverNote },
+    });
     await logEvent(tx, created.id, user.id, "APPLIED", coverNote);
     return created;
   });
@@ -201,7 +228,9 @@ export async function applyToJob(_: ActionState, formData: FormData): Promise<Ac
 }
 
 async function ownApplication(candidateId: string, applicationId: string) {
-  return db.application.findFirst({ where: { id: applicationId, candidateId } });
+  return db.application.findFirst({
+    where: { id: applicationId, candidateId },
+  });
 }
 
 export async function commitToApplication(_: ActionState, formData: FormData): Promise<ActionState> {
@@ -220,7 +249,10 @@ export async function commitToApplication(_: ActionState, formData: FormData): P
       // Conditional update so two concurrent commits can't both succeed.
       const { count } = await tx.candidateProfile.updateMany({
         where: { id: profile.id, committedApplicationId: null },
-        data: { committedApplicationId: application.id, committedAt: new Date() },
+        data: {
+          committedApplicationId: application.id,
+          committedAt: new Date(),
+        },
       });
       if (count === 0) throw new Error("ALREADY_COMMITTED");
       await logEvent(tx, application.id, user.id, "COMMITTED");
@@ -255,7 +287,10 @@ export async function releaseCommitment(_: ActionState, formData: FormData): Pro
   return done("Commitment released. Releases are visible to recruiters.");
 }
 
-const withdrawSchema = z.object({ applicationId: zId, reason: zReason("Reason") });
+const withdrawSchema = z.object({
+  applicationId: zId,
+  reason: zReason("Reason"),
+});
 
 export async function withdrawApplication(_: ActionState, formData: FormData): Promise<ActionState> {
   const { user, profile } = await requireCandidate();
@@ -298,12 +333,18 @@ export async function confirmInterview(_: ActionState, formData: FormData): Prom
   if (!parsed.ok) return fail(parsed.error);
 
   const interview = await db.interview.findFirst({
-    where: { id: parsed.data.interviewId, application: { candidateId: profile.id } },
+    where: {
+      id: parsed.data.interviewId,
+      application: { candidateId: profile.id },
+    },
   });
   if (!interview || interview.status !== "SCHEDULED") return fail("This interview can't be confirmed.");
 
   await db.$transaction(async (tx) => {
-    await tx.interview.update({ where: { id: interview.id }, data: { candidateConfirmed: true } });
+    await tx.interview.update({
+      where: { id: interview.id },
+      data: { candidateConfirmed: true },
+    });
     await logEvent(tx, interview.applicationId, user.id, "INTERVIEW_CONFIRMED", interview.round);
   });
   refresh();

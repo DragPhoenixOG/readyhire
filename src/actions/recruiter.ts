@@ -31,7 +31,9 @@ const jobSchema = z
     title: zText("Job title", 120),
     description: zText("Description", 5000),
     location: zText("Location", 120),
-    workMode: z.enum(["ONSITE", "HYBRID", "REMOTE"], { error: "Choose a work mode." }),
+    workMode: z.enum(["ONSITE", "HYBRID", "REMOTE"], {
+      error: "Choose a work mode.",
+    }),
     minExperience: zNumber("Minimum experience", 0, 40),
     maxExperience: zOptionalNumber("Maximum experience", 0, 50),
     skills: zText("Skills", 500),
@@ -49,7 +51,9 @@ const jobSchema = z
 
 export async function postJob(_: ActionState, formData: FormData): Promise<ActionState> {
   const { recruiter } = await requireApprovedRecruiter();
-  const overdue = await db.application.count({ where: { ...overdueWhere(), job: { recruiterId: recruiter.id } } });
+  const overdue = await db.application.count({
+    where: { ...overdueWhere(), job: { recruiterId: recruiter.id } },
+  });
   if (overdue > 0) {
     return fail(`You have ${overdue} overdue application response(s). Respond to them before posting a new job.`);
   }
@@ -57,7 +61,11 @@ export async function postJob(_: ActionState, formData: FormData): Promise<Actio
   if (!parsed.ok) return fail(parsed.error);
 
   const job = await db.job.create({
-    data: { ...parsed.data, recruiterId: recruiter.id, companyId: recruiter.companyId },
+    data: {
+      ...parsed.data,
+      recruiterId: recruiter.id,
+      companyId: recruiter.companyId,
+    },
   });
   redirect(`/recruiter/jobs/${job.id}`);
 }
@@ -68,10 +76,14 @@ export async function setJobStatus(_: ActionState, formData: FormData): Promise<
   if (!parsed.ok) return fail(parsed.error);
   const { jobId, status } = parsed.data;
 
-  const job = await db.job.findFirst({ where: { id: jobId, recruiterId: recruiter.id } });
+  const job = await db.job.findFirst({
+    where: { id: jobId, recruiterId: recruiter.id },
+  });
   if (!job) return fail("Job not found.");
   if (status === "CLOSED") {
-    const pending = await db.application.count({ where: { jobId, status: "APPLIED" } });
+    const pending = await db.application.count({
+      where: { jobId, status: "APPLIED" },
+    });
     if (pending > 0) return fail(`Respond to the ${pending} pending application(s) before closing this job.`);
   }
   await db.job.update({ where: { id: jobId }, data: { status } });
@@ -89,7 +101,10 @@ async function ownApplication(recruiterId: string, applicationId: string) {
   });
 }
 
-const acceptSchema = z.object({ applicationId: zId, message: zReason("Message to the candidate") });
+const acceptSchema = z.object({
+  applicationId: zId,
+  message: zReason("Message to the candidate"),
+});
 
 export async function acceptApplication(_: ActionState, formData: FormData): Promise<ActionState> {
   const { user, recruiter } = await requireApprovedRecruiter();
@@ -104,7 +119,11 @@ export async function acceptApplication(_: ActionState, formData: FormData): Pro
   await db.$transaction(async (tx) => {
     await tx.application.update({
       where: { id: application.id },
-      data: { status: "ACCEPTED", respondedAt: new Date(), responseMessage: message },
+      data: {
+        status: "ACCEPTED",
+        respondedAt: new Date(),
+        responseMessage: message,
+      },
     });
     await logEvent(tx, application.id, user.id, "ACCEPTED", message);
   });
@@ -115,7 +134,9 @@ export async function acceptApplication(_: ActionState, formData: FormData): Pro
 
 const rejectSchema = z.object({
   applicationId: zId,
-  category: z.enum(REJECTION_CATEGORIES, { error: "Choose a rejection reason." }),
+  category: z.enum(REJECTION_CATEGORIES, {
+    error: "Choose a rejection reason.",
+  }),
   reason: zReason("Explanation for the candidate"),
 });
 
@@ -164,7 +185,9 @@ const interviewSchema = z
     round: zText("Round name", 80),
     scheduledAt: z.string({ error: "Date and time are required." }),
     durationMins: zNumber("Duration", 15, 480),
-    mode: z.enum(["VIDEO", "PHONE", "IN_PERSON", "READYHIRE_ROOM"], { error: "Choose an interview mode." }),
+    mode: z.enum(["VIDEO", "PHONE", "IN_PERSON", "READYHIRE_ROOM"], {
+      error: "Choose an interview mode.",
+    }),
     location: zOptionalText(300),
     room: zOptionalText(100),
     notes: zOptionalText(1000),
@@ -192,10 +215,27 @@ export async function scheduleInterview(_: ActionState, formData: FormData): Pro
   const place = mode === "READYHIRE_ROOM" ? `Readyhire Room — ${room}` : location;
   const interview = await db.$transaction(async (tx) => {
     const created = await tx.interview.create({
-      data: { applicationId, round, scheduledAt, durationMins, mode, location: place, notes },
+      data: {
+        applicationId,
+        round,
+        scheduledAt,
+        durationMins,
+        mode,
+        location: place,
+        notes,
+      },
     });
-    await tx.application.update({ where: { id: applicationId }, data: { status: "INTERVIEWING" } });
-    await logEvent(tx, applicationId, user.id, "INTERVIEW_SCHEDULED", `${round} on ${parsed.data.scheduledAt.replace("T", " ")} IST`);
+    await tx.application.update({
+      where: { id: applicationId },
+      data: { status: "INTERVIEWING" },
+    });
+    await logEvent(
+      tx,
+      applicationId,
+      user.id,
+      "INTERVIEW_SCHEDULED",
+      `${round} on ${parsed.data.scheduledAt.replace("T", " ")} IST`,
+    );
     return created;
   });
   notify.interviewScheduled(interview.id);
@@ -205,7 +245,9 @@ export async function scheduleInterview(_: ActionState, formData: FormData): Pro
 
 const interviewUpdateSchema = z.object({
   interviewId: zId,
-  status: z.enum(["COMPLETED", "NO_SHOW", "CANCELLED"], { error: "Choose an outcome." }),
+  status: z.enum(["COMPLETED", "NO_SHOW", "CANCELLED"], {
+    error: "Choose an outcome.",
+  }),
 });
 
 export async function updateInterviewStatus(_: ActionState, formData: FormData): Promise<ActionState> {
@@ -214,14 +256,24 @@ export async function updateInterviewStatus(_: ActionState, formData: FormData):
   if (!parsed.ok) return fail(parsed.error);
 
   const interview = await db.interview.findFirst({
-    where: { id: parsed.data.interviewId, application: { job: { recruiterId: recruiter.id } } },
+    where: {
+      id: parsed.data.interviewId,
+      application: { job: { recruiterId: recruiter.id } },
+    },
   });
   if (!interview) return fail("Interview not found.");
   if (interview.status !== "SCHEDULED") return fail("This interview has already been updated.");
 
-  const label = { COMPLETED: "completed", NO_SHOW: "marked as a no-show", CANCELLED: "cancelled" }[parsed.data.status];
+  const label = {
+    COMPLETED: "completed",
+    NO_SHOW: "marked as a no-show",
+    CANCELLED: "cancelled",
+  }[parsed.data.status];
   await db.$transaction(async (tx) => {
-    await tx.interview.update({ where: { id: interview.id }, data: { status: parsed.data.status } });
+    await tx.interview.update({
+      where: { id: interview.id },
+      data: { status: parsed.data.status },
+    });
     await logEvent(tx, interview.applicationId, user.id, "INTERVIEW_UPDATED", `${interview.round} ${label}`);
   });
   refresh();
@@ -261,7 +313,9 @@ export async function extendOffer(_: ActionState, formData: FormData): Promise<A
 
 const outcomeSchema = z.object({
   applicationId: zId,
-  outcome: z.enum(["JOINED", "NOT_JOINED"], { error: "Choose the joining outcome." }),
+  outcome: z.enum(["JOINED", "NOT_JOINED"], {
+    error: "Choose the joining outcome.",
+  }),
   reason: zOptionalText(1000),
 });
 
@@ -281,7 +335,11 @@ export async function recordJoiningOutcome(_: ActionState, formData: FormData): 
   await db.$transaction(async (tx) => {
     await tx.application.update({
       where: { id: applicationId },
-      data: { status: outcome, outcomeAt: new Date(), notJoinedReason: outcome === "NOT_JOINED" ? reason : null },
+      data: {
+        status: outcome,
+        outcomeAt: new Date(),
+        notJoinedReason: outcome === "NOT_JOINED" ? reason : null,
+      },
     });
     // The commitment is fulfilled (or broken) once the joining outcome is known.
     if (application.candidate.committedApplicationId === application.id) {
@@ -298,7 +356,9 @@ export async function recordJoiningOutcome(_: ActionState, formData: FormData): 
 
 const ghostingSchema = z.object({
   applicationId: zId,
-  stage: z.enum(["INTERVIEW_NO_SHOW", "OFFER_NO_RESPONSE", "DID_NOT_JOIN", "OTHER"], { error: "Choose what happened." }),
+  stage: z.enum(["INTERVIEW_NO_SHOW", "OFFER_NO_RESPONSE", "DID_NOT_JOIN", "OTHER"], {
+    error: "Choose what happened.",
+  }),
   details: zReason("Details", 2000),
 });
 
@@ -311,12 +371,20 @@ export async function reportGhosting(_: ActionState, formData: FormData): Promis
   const application = await ownApplication(recruiter.id, applicationId);
   if (!application) return fail("Application not found.");
   if (application.status === "APPLIED") return fail("You can report ghosting once you've engaged with the candidate.");
-  const open = await db.ghostingReport.findFirst({ where: { applicationId, status: "OPEN" } });
+  const open = await db.ghostingReport.findFirst({
+    where: { applicationId, status: "OPEN" },
+  });
   if (open) return fail("A ghosting report for this application is already under review.");
 
   await db.$transaction(async (tx) => {
     await tx.ghostingReport.create({
-      data: { applicationId, candidateId: application.candidateId, reporterId: user.id, stage, details },
+      data: {
+        applicationId,
+        candidateId: application.candidateId,
+        reporterId: user.id,
+        stage,
+        details,
+      },
     });
     await logEvent(tx, applicationId, user.id, "GHOSTING_REPORTED", details);
   });

@@ -18,7 +18,7 @@ export function NavLinks({ items, root }: { items: NavItem[]; root: string }) {
             href={item.href}
             aria-current={active ? "page" : undefined}
             className={cx(
-              "flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition-colors",
+              "flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors",
               active
                 ? "border-brand-700 text-brand-800"
                 : "border-transparent text-slate-600 hover:border-slate-300 hover:text-slate-900",
@@ -26,7 +26,9 @@ export function NavLinks({ items, root }: { items: NavItem[]; root: string }) {
           >
             {item.label}
             {!!item.count && (
-              <span className="rounded-full bg-amber-100 px-1.5 text-xs font-semibold text-amber-800">{item.count}</span>
+              <span className="rounded-full bg-amber-100 px-1.5 text-xs font-semibold text-amber-800">
+                {item.count}
+              </span>
             )}
           </Link>
         );

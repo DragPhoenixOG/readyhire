@@ -8,12 +8,7 @@ import { Disclosure } from "@/components/disclosure";
 import { Badge, Card, DescriptionList, Field, Notice, PageHeader, inputClass } from "@/components/ui";
 import { requireRole } from "@/lib/auth";
 import { candidateSummaryInclude, summarizeCandidate } from "@/lib/candidate";
-import {
-  DOCUMENT_INFO,
-  MIN_REASON_LENGTH,
-  REQUIRED_DOCUMENTS,
-  VERIFICATION_METHOD_LABEL,
-} from "@/lib/constants";
+import { DOCUMENT_INFO, MIN_REASON_LENGTH, REQUIRED_DOCUMENTS, VERIFICATION_METHOD_LABEL } from "@/lib/constants";
 import { db } from "@/lib/db";
 import { formatDate, formatDateTime, formatLpa, toDateInputValue } from "@/lib/format";
 
@@ -38,14 +33,25 @@ export default async function ReviewCandidatePage({ params }: PageProps<"/admin/
     include: {
       ...candidateSummaryInclude,
       verifiedBy: { select: { name: true } },
-      documents: { include: { reviewedBy: { select: { name: true } } }, orderBy: { uploadedAt: "desc" } },
-      offers: { include: { document: { include: { reviewedBy: { select: { name: true } } } } }, orderBy: { createdAt: "desc" } },
+      documents: {
+        include: { reviewedBy: { select: { name: true } } },
+        orderBy: { uploadedAt: "desc" },
+      },
+      offers: {
+        include: {
+          document: { include: { reviewedBy: { select: { name: true } } } },
+        },
+        orderBy: { createdAt: "desc" },
+      },
     },
   });
   if (!candidate) notFound();
 
   const summary = summarizeCandidate(candidate);
-  const required = REQUIRED_DOCUMENTS.map((type) => ({ type, doc: candidate.documents.find((d) => d.type === type) }));
+  const required = REQUIRED_DOCUMENTS.map((type) => ({
+    type,
+    doc: candidate.documents.find((d) => d.type === type),
+  }));
   const allVerified = required.every((r) => r.doc?.status === "VERIFIED");
   const inPersonEligible = candidate.city === "Hyderabad" || candidate.city === "Bengaluru";
 
@@ -66,19 +72,40 @@ export default async function ReviewCandidatePage({ params }: PageProps<"/admin/
 
       <div className="grid gap-6 lg:grid-cols-[1fr_minmax(0,24rem)]">
         <div className="space-y-6">
-          <Card title="Declared details" description={candidate.submittedAt ? `Submitted ${formatDateTime(candidate.submittedAt)}` : "Not submitted yet"}>
+          <Card
+            title="Declared details"
+            description={
+              candidate.submittedAt ? `Submitted ${formatDateTime(candidate.submittedAt)}` : "Not submitted yet"
+            }
+          >
             <DescriptionList
               items={[
-                { label: "Current company", value: candidate.currentCompany ?? "—" },
-                { label: "Current title", value: candidate.currentTitle ?? "—" },
-                { label: "Notice period", value: candidate.noticePeriodDays != null ? `${candidate.noticePeriodDays} days` : "—" },
-                { label: "Resignation date", value: formatDate(candidate.resignationDate) },
-                { label: "Last working day", value: formatDate(candidate.lastWorkingDay) },
+                {
+                  label: "Current company",
+                  value: candidate.currentCompany ?? "—",
+                },
+                {
+                  label: "Current title",
+                  value: candidate.currentTitle ?? "—",
+                },
+                {
+                  label: "Notice period",
+                  value: candidate.noticePeriodDays != null ? `${candidate.noticePeriodDays} days` : "—",
+                },
+                {
+                  label: "Resignation date",
+                  value: formatDate(candidate.resignationDate),
+                },
+                {
+                  label: "Last working day",
+                  value: formatDate(candidate.lastWorkingDay),
+                },
                 {
                   label: "City",
                   value: (
                     <>
-                      {candidate.city ?? "—"} {inPersonEligible && <Badge tone="violet">In-person check available</Badge>}
+                      {candidate.city ?? "—"}{" "}
+                      {inPersonEligible && <Badge tone="violet">In-person check available</Badge>}
                     </>
                   ),
                 },
@@ -86,7 +113,10 @@ export default async function ReviewCandidatePage({ params }: PageProps<"/admin/
             />
           </Card>
 
-          <Card title="Required documents" description="Open each file, compare it against the declared details, then verify or reject it.">
+          <Card
+            title="Required documents"
+            description="Open each file, compare it against the declared details, then verify or reject it."
+          >
             <ul className="space-y-5">
               {required.map(({ type, doc }) => (
                 <li key={type} className="rounded-lg border border-slate-200 p-4">
@@ -102,7 +132,10 @@ export default async function ReviewCandidatePage({ params }: PageProps<"/admin/
             </ul>
           </Card>
 
-          <Card title="Declared offers" description="Offers the candidate holds elsewhere. Verify attached offer letters so recruiters see proof-backed counts.">
+          <Card
+            title="Declared offers"
+            description="Offers the candidate holds elsewhere. Verify attached offer letters so recruiters see proof-backed counts."
+          >
             {candidate.offers.length === 0 ? (
               <p className="text-sm text-slate-500">No offers declared.</p>
             ) : (
@@ -116,9 +149,15 @@ export default async function ReviewCandidatePage({ params }: PageProps<"/admin/
                       <OfferStatusBadge status={offer.status} />
                     </div>
                     <p className="text-sm text-slate-500">
-                      {[formatLpa(offer.ctcLpa), offer.joiningDate && `joining ${formatDate(offer.joiningDate)}`].filter(Boolean).join(" · ") || "No details"}
+                      {[formatLpa(offer.ctcLpa), offer.joiningDate && `joining ${formatDate(offer.joiningDate)}`]
+                        .filter(Boolean)
+                        .join(" · ") || "No details"}
                     </p>
-                    {offer.document ? <DocumentReview doc={offer.document} canReview /> : <p className="mt-2 text-xs text-slate-400">No proof attached.</p>}
+                    {offer.document ? (
+                      <DocumentReview doc={offer.document} canReview />
+                    ) : (
+                      <p className="mt-2 text-xs text-slate-400">No proof attached.</p>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -174,7 +213,11 @@ export default async function ReviewCandidatePage({ params }: PageProps<"/admin/
                       />
                     </Field>
                   </div>
-                  <Field label="Internal notes" htmlFor="notes" hint="Screen-share or door-check observations. Not shown to candidates or recruiters.">
+                  <Field
+                    label="Internal notes"
+                    htmlFor="notes"
+                    hint="Screen-share or door-check observations. Not shown to candidates or recruiters."
+                  >
                     <textarea id="notes" name="notes" rows={3} className={inputClass} />
                   </Field>
                 </ActionForm>
@@ -182,7 +225,14 @@ export default async function ReviewCandidatePage({ params }: PageProps<"/admin/
                   <ActionForm action={rejectCandidate} submitLabel="Reject verification" variant="danger" size="sm">
                     <input type="hidden" name="candidateId" value={candidate.id} />
                     <Field label="What should the candidate fix?" htmlFor="reject-reason">
-                      <textarea id="reject-reason" name="reason" rows={3} required minLength={MIN_REASON_LENGTH} className={inputClass} />
+                      <textarea
+                        id="reject-reason"
+                        name="reason"
+                        rows={3}
+                        required
+                        minLength={MIN_REASON_LENGTH}
+                        className={inputClass}
+                      />
                     </Field>
                   </ActionForm>
                 </Disclosure>
@@ -191,11 +241,16 @@ export default async function ReviewCandidatePage({ params }: PageProps<"/admin/
               <div className="space-y-4 text-sm">
                 <DescriptionList
                   items={[
-                    { label: "Verified", value: formatDateTime(candidate.verifiedAt) },
+                    {
+                      label: "Verified",
+                      value: formatDateTime(candidate.verifiedAt),
+                    },
                     { label: "By", value: candidate.verifiedBy?.name ?? "—" },
                     {
                       label: "Method",
-                      value: candidate.verificationMethod ? VERIFICATION_METHOD_LABEL[candidate.verificationMethod] : "—",
+                      value: candidate.verificationMethod
+                        ? VERIFICATION_METHOD_LABEL[candidate.verificationMethod]
+                        : "—",
                     },
                   ]}
                 />
@@ -205,10 +260,23 @@ export default async function ReviewCandidatePage({ params }: PageProps<"/admin/
                   </p>
                 )}
                 <Disclosure summary="Revoke verification" tone="ghost">
-                  <ActionForm action={rejectCandidate} submitLabel="Revoke & delist" variant="danger" size="sm" confirm="The candidate will be hidden from recruiters. Continue?">
+                  <ActionForm
+                    action={rejectCandidate}
+                    submitLabel="Revoke & delist"
+                    variant="danger"
+                    size="sm"
+                    confirm="The candidate will be hidden from recruiters. Continue?"
+                  >
                     <input type="hidden" name="candidateId" value={candidate.id} />
                     <Field label="Reason (shown to the candidate)" htmlFor="revoke-reason">
-                      <textarea id="revoke-reason" name="reason" rows={3} required minLength={MIN_REASON_LENGTH} className={inputClass} />
+                      <textarea
+                        id="revoke-reason"
+                        name="reason"
+                        rows={3}
+                        required
+                        minLength={MIN_REASON_LENGTH}
+                        className={inputClass}
+                      />
                     </Field>
                   </ActionForm>
                 </Disclosure>
@@ -258,20 +326,45 @@ function DocumentReview({ doc, canReview }: { doc: Doc; canReview: boolean }) {
         </p>
       )}
       {canReview && (
-        <ActionForm action={reviewDocument} submitLabel="Save review" variant="secondary" size="sm" className="space-y-2">
+        <ActionForm
+          action={reviewDocument}
+          submitLabel="Save review"
+          variant="secondary"
+          size="sm"
+          className="space-y-2"
+        >
           <input type="hidden" name="documentId" value={doc.id} />
           <fieldset className="flex flex-wrap gap-4 text-sm">
             <legend className="sr-only">Decision</legend>
             <label className="flex items-center gap-2">
-              <input type="radio" name="decision" value="VERIFIED" required defaultChecked={doc.status === "VERIFIED"} className="accent-brand-700" />
+              <input
+                type="radio"
+                name="decision"
+                value="VERIFIED"
+                required
+                defaultChecked={doc.status === "VERIFIED"}
+                className="accent-brand-700"
+              />
               Verified
             </label>
             <label className="flex items-center gap-2">
-              <input type="radio" name="decision" value="REJECTED" defaultChecked={doc.status === "REJECTED"} className="accent-rose-600" />
+              <input
+                type="radio"
+                name="decision"
+                value="REJECTED"
+                defaultChecked={doc.status === "REJECTED"}
+                className="accent-rose-600"
+              />
               Reject
             </label>
           </fieldset>
-          <input name="note" placeholder="Note (required when rejecting)" defaultValue={doc.reviewNote ?? ""} aria-label="Review note" className={inputClass} />
+          <input
+            name="note"
+            placeholder="Note (required when rejecting)"
+            defaultValue={doc.reviewNote ?? ""}
+            aria-label="Review note"
+            className={inputClass}
+          />
         </ActionForm>
       )}
     </div>

@@ -24,7 +24,12 @@ export default async function CandidateApplicationPage({ params }: PageProps<"/c
   const application = await db.application.findFirst({
     where: { id, candidateId: profile.id },
     include: {
-      job: { include: { company: true, recruiter: { include: { user: { select: { name: true } } } } } },
+      job: {
+        include: {
+          company: true,
+          recruiter: { include: { user: { select: { name: true } } } },
+        },
+      },
       interviews: { orderBy: { scheduledAt: "asc" } },
       events: {
         where: { type: { notIn: INTERNAL_EVENTS } },
@@ -54,12 +59,18 @@ export default async function CandidateApplicationPage({ params }: PageProps<"/c
         <div className="space-y-6">
           <Card title="Recruiter response">
             {application.status === "APPLIED" ? (
-              <Notice tone={due < new Date() ? "red" : "amber"} title={due < new Date() ? "Response overdue" : "Awaiting response"}>
+              <Notice
+                tone={due < new Date() ? "red" : "amber"}
+                title={due < new Date() ? "Response overdue" : "Awaiting response"}
+              >
                 The recruiter must accept or reject your application by {formatDateTime(due)}.
                 {due < new Date() && " Readyhire has flagged this to the recruiter."}
               </Notice>
             ) : application.status === "REJECTED" ? (
-              <Notice tone="red" title={`Not moving forward${application.rejectionCategory ? ` — ${application.rejectionCategory}` : ""}`}>
+              <Notice
+                tone="red"
+                title={`Not moving forward${application.rejectionCategory ? ` — ${application.rejectionCategory}` : ""}`}
+              >
                 <p className="whitespace-pre-line">{application.rejectionReason}</p>
               </Notice>
             ) : application.status === "WITHDRAWN" ? (
@@ -73,13 +84,18 @@ export default async function CandidateApplicationPage({ params }: PageProps<"/c
             )}
           </Card>
 
-          {(application.status === "OFFERED" || application.status === "JOINED" || application.status === "NOT_JOINED") && (
+          {(application.status === "OFFERED" ||
+            application.status === "JOINED" ||
+            application.status === "NOT_JOINED") && (
             <Card title="Offer">
               <p className="text-sm text-slate-700">
-                {formatLpa(application.offerCtcLpa) ?? "CTC shared separately"} · joining {formatDate(application.offerJoiningDate)}
+                {formatLpa(application.offerCtcLpa) ?? "CTC shared separately"} · joining{" "}
+                {formatDate(application.offerJoiningDate)}
               </p>
               {application.status === "JOINED" && (
-                <p className="mt-2 text-sm font-medium text-emerald-700">Joined — recorded {formatDate(application.outcomeAt)}.</p>
+                <p className="mt-2 text-sm font-medium text-emerald-700">
+                  Joined — recorded {formatDate(application.outcomeAt)}.
+                </p>
               )}
               {application.status === "NOT_JOINED" && (
                 <p className="mt-2 text-sm text-rose-700">Marked as not joined: {application.notJoinedReason}</p>
@@ -91,7 +107,9 @@ export default async function CandidateApplicationPage({ params }: PageProps<"/c
             <InterviewList
               interviews={application.interviews}
               renderAction={(interview) =>
-                interview.status === "SCHEDULED" && !interview.candidateConfirmed && interview.scheduledAt > new Date() ? (
+                interview.status === "SCHEDULED" &&
+                !interview.candidateConfirmed &&
+                interview.scheduledAt > new Date() ? (
                   <ActionForm action={confirmInterview} submitLabel="Confirm attendance" size="sm">
                     <input type="hidden" name="interviewId" value={interview.id} />
                   </ActionForm>
@@ -114,8 +132,19 @@ export default async function CandidateApplicationPage({ params }: PageProps<"/c
                 </Notice>
                 <Disclosure summary="Release commitment">
                   <ActionForm action={releaseCommitment} submitLabel="Release commitment" variant="danger" size="sm">
-                    <Field label="Why are you releasing it?" htmlFor="release-reason" hint={`At least ${MIN_REASON_LENGTH} characters. Releases are visible to recruiters.`}>
-                      <textarea id="release-reason" name="reason" rows={3} required minLength={MIN_REASON_LENGTH} className={inputClass} />
+                    <Field
+                      label="Why are you releasing it?"
+                      htmlFor="release-reason"
+                      hint={`At least ${MIN_REASON_LENGTH} characters. Releases are visible to recruiters.`}
+                    >
+                      <textarea
+                        id="release-reason"
+                        name="reason"
+                        rows={3}
+                        required
+                        minLength={MIN_REASON_LENGTH}
+                        className={inputClass}
+                      />
                     </Field>
                   </ActionForm>
                 </Disclosure>
@@ -134,7 +163,10 @@ export default async function CandidateApplicationPage({ params }: PageProps<"/c
             ) : profile.committedApplicationId && isOpen ? (
               <p className="text-sm text-slate-600">
                 You&apos;re committed to{" "}
-                <Link href={`/candidate/applications/${profile.committedApplicationId}`} className="font-medium text-brand-700 hover:underline">
+                <Link
+                  href={`/candidate/applications/${profile.committedApplicationId}`}
+                  className="font-medium text-brand-700 hover:underline"
+                >
                   another role
                 </Link>
                 .
@@ -157,10 +189,23 @@ export default async function CandidateApplicationPage({ params }: PageProps<"/c
 
           {isOpen && (
             <Disclosure summary="Withdraw application" tone="ghost">
-              <ActionForm action={withdrawApplication} submitLabel="Withdraw" variant="danger" size="sm" confirm="Withdraw this application?">
+              <ActionForm
+                action={withdrawApplication}
+                submitLabel="Withdraw"
+                variant="danger"
+                size="sm"
+                confirm="Withdraw this application?"
+              >
                 <input type="hidden" name="applicationId" value={application.id} />
                 <Field label="Reason (shared with the recruiter)" htmlFor="withdraw-reason">
-                  <textarea id="withdraw-reason" name="reason" rows={3} required minLength={MIN_REASON_LENGTH} className={inputClass} />
+                  <textarea
+                    id="withdraw-reason"
+                    name="reason"
+                    rows={3}
+                    required
+                    minLength={MIN_REASON_LENGTH}
+                    className={inputClass}
+                  />
                 </Field>
               </ActionForm>
             </Disclosure>

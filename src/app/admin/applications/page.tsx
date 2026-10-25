@@ -22,7 +22,12 @@ export default async function AdminApplicationsPage({ searchParams }: PageProps<
   const applications = await db.application.findMany({
     where: status ? { status } : {},
     include: {
-      job: { include: { company: true, recruiter: { include: { user: { select: { name: true } } } } } },
+      job: {
+        include: {
+          company: true,
+          recruiter: { include: { user: { select: { name: true } } } },
+        },
+      },
       candidate: { include: { user: { select: { name: true } } } },
     },
     orderBy: { createdAt: "desc" },
@@ -31,7 +36,10 @@ export default async function AdminApplicationsPage({ searchParams }: PageProps<
 
   return (
     <>
-      <PageHeader title="Applications" description="Every application, the recruiter's response and the joining outcome." />
+      <PageHeader
+        title="Applications"
+        description="Every application, the recruiter's response and the joining outcome."
+      />
       <nav className="mb-4 flex flex-wrap gap-2" aria-label="Filter by status">
         {[undefined, ...STATUSES].map((s) => (
           <Link
@@ -40,7 +48,9 @@ export default async function AdminApplicationsPage({ searchParams }: PageProps<
             aria-current={s === status ? "page" : undefined}
             className={cx(
               "rounded-full px-3 py-1.5 text-sm font-medium ring-1 ring-inset",
-              s === status ? "bg-brand-700 text-white ring-brand-700" : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50",
+              s === status
+                ? "bg-brand-700 text-white ring-brand-700"
+                : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50",
             )}
           >
             {s ? APPLICATION_STATUS_LABEL[s] : "All"}
@@ -57,7 +67,10 @@ export default async function AdminApplicationsPage({ searchParams }: PageProps<
               return (
                 <tr key={a.id}>
                   <Td>
-                    <Link href={`/admin/verifications/${a.candidateId}`} className="font-medium text-slate-900 hover:underline">
+                    <Link
+                      href={`/admin/verifications/${a.candidateId}`}
+                      className="font-medium text-slate-900 hover:underline"
+                    >
                       {a.candidate.user.name}
                     </Link>
                   </Td>
@@ -84,7 +97,9 @@ export default async function AdminApplicationsPage({ searchParams }: PageProps<
                   </Td>
                   <Td className="max-w-xs">
                     <p className="line-clamp-2 text-xs text-slate-600">
-                      {a.status === "REJECTED" ? `${a.rejectionCategory}: ${a.rejectionReason}` : (a.responseMessage ?? "—")}
+                      {a.status === "REJECTED"
+                        ? `${a.rejectionCategory}: ${a.rejectionReason}`
+                        : (a.responseMessage ?? "—")}
                     </p>
                   </Td>
                 </tr>

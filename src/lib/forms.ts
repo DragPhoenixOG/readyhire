@@ -19,7 +19,10 @@ export function parseForm<T extends z.ZodType>(
 ): { ok: true; data: z.infer<T> } | { ok: false; error: string } {
   const result = schema.safeParse(Object.fromEntries(formData));
   if (!result.success) {
-    return { ok: false, error: result.error.issues[0]?.message ?? "Check the form and try again." };
+    return {
+      ok: false,
+      error: result.error.issues[0]?.message ?? "Check the form and try again.",
+    };
   }
   return { ok: true, data: result.data };
 }
@@ -92,7 +95,10 @@ export function zOptionalDate(label: string) {
       if (!value) return null;
       const date = parseDateInput(value);
       if (!date) {
-        ctx.addIssue({ code: "custom", message: `${label} is not a valid date.` });
+        ctx.addIssue({
+          code: "custom",
+          message: `${label} is not a valid date.`,
+        });
         return z.NEVER;
       }
       return date;
@@ -110,4 +116,6 @@ export const zPassword = z
   .min(8, "Password must be at least 8 characters.")
   .max(100, "Password is too long.");
 
-export const zAcceptTerms = z.literal("on", { error: "You need to accept the terms to continue." });
+export const zAcceptTerms = z.literal("on", {
+  error: "You need to accept the terms to continue.",
+});

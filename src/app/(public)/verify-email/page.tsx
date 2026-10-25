@@ -26,7 +26,12 @@ export default async function VerifyEmailPage() {
           </p>
         )}
         <div className="mt-6 flex flex-wrap items-start gap-3">
-          <ActionForm action={resendVerification} submitLabel="Resend link" pendingLabel="Sending…" variant="secondary" />
+          <ActionForm
+            action={resendVerification}
+            submitLabel="Resend link"
+            pendingLabel="Sending…"
+            variant="secondary"
+          />
           <form action={logout}>
             <button type="submit" className={buttonClass("ghost")}>
               Use a different account

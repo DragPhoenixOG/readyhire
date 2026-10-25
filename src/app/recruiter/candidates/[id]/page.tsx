@@ -34,16 +34,29 @@ export default async function RecruiterCandidatePage({ params }: PageProps<"/rec
 
   return (
     <>
-      <PageHeader title={candidate.user.name} description={candidate.headline ?? undefined} back={{ href: "/recruiter/candidates", label: "Verified talent" }} />
+      <PageHeader
+        title={candidate.user.name}
+        description={candidate.headline ?? undefined}
+        back={{ href: "/recruiter/candidates", label: "Verified talent" }}
+      />
       <div className="grid gap-6 lg:grid-cols-[1fr_minmax(0,22rem)]">
         <div className="space-y-6">
           <Card title="Profile">
             <DescriptionList
               items={[
-                { label: "Current role", value: [candidate.currentTitle, candidate.currentCompany].filter(Boolean).join(" at ") || "—" },
-                { label: "Experience", value: candidate.experienceYears != null ? `${candidate.experienceYears} years` : "—" },
+                {
+                  label: "Current role",
+                  value: [candidate.currentTitle, candidate.currentCompany].filter(Boolean).join(" at ") || "—",
+                },
+                {
+                  label: "Experience",
+                  value: candidate.experienceYears != null ? `${candidate.experienceYears} years` : "—",
+                },
                 { label: "City", value: candidate.city ?? "—" },
-                { label: "On Readyhire since", value: formatDate(candidate.createdAt) },
+                {
+                  label: "On Readyhire since",
+                  value: formatDate(candidate.createdAt),
+                },
               ]}
             />
             <div className="mt-4">
@@ -53,14 +66,17 @@ export default async function RecruiterCandidatePage({ params }: PageProps<"/rec
           <Card title="Applications to your jobs">
             {withMe.length === 0 ? (
               <p className="text-sm text-slate-500">
-                This candidate hasn&apos;t applied to your jobs yet. Candidates apply to roles themselves — keep your job posts
-                specific about the joining window.
+                This candidate hasn&apos;t applied to your jobs yet. Candidates apply to roles themselves — keep your
+                job posts specific about the joining window.
               </p>
             ) : (
               <ul className="divide-y divide-slate-100">
                 {withMe.map((a) => (
                   <li key={a.id} className="flex items-center justify-between gap-3 py-2 text-sm">
-                    <Link href={`/recruiter/applications/${a.id}`} className="font-medium text-slate-900 hover:underline">
+                    <Link
+                      href={`/recruiter/applications/${a.id}`}
+                      className="font-medium text-slate-900 hover:underline"
+                    >
                       {a.job.title}
                     </Link>
                     <ApplicationStatusBadge status={a.status} />
@@ -74,7 +90,9 @@ export default async function RecruiterCandidatePage({ params }: PageProps<"/rec
           <CandidateSignals
             summary={summary}
             verifiedAt={candidate.verifiedAt}
-            verificationMethodLabel={candidate.verificationMethod ? VERIFICATION_METHOD_LABEL[candidate.verificationMethod] : null}
+            verificationMethodLabel={
+              candidate.verificationMethod ? VERIFICATION_METHOD_LABEL[candidate.verificationMethod] : null
+            }
             recruiterId={recruiter.id}
           />
         </Card>

@@ -19,16 +19,29 @@ export const metadata: Metadata = { title: "Dashboard" };
 export default async function CandidateDashboard() {
   const { user, profile } = await requireCandidate();
   const [documents, applications, activeOffers, interviews] = await Promise.all([
-    db.document.findMany({ where: { candidateId: profile.id, type: { in: REQUIRED_DOCUMENTS } } }),
+    db.document.findMany({
+      where: { candidateId: profile.id, type: { in: REQUIRED_DOCUMENTS } },
+    }),
     db.application.findMany({
       where: { candidateId: profile.id },
       include: { job: { include: { company: true } } },
       orderBy: { updatedAt: "desc" },
     }),
-    db.offer.count({ where: { candidateId: profile.id, status: { in: ACTIVE_OFFER_STATUSES } } }),
+    db.offer.count({
+      where: {
+        candidateId: profile.id,
+        status: { in: ACTIVE_OFFER_STATUSES },
+      },
+    }),
     db.interview.findMany({
-      where: { status: "SCHEDULED", scheduledAt: { gte: new Date() }, application: { candidateId: profile.id } },
-      include: { application: { include: { job: { include: { company: true } } } } },
+      where: {
+        status: "SCHEDULED",
+        scheduledAt: { gte: new Date() },
+        application: { candidateId: profile.id },
+      },
+      include: {
+        application: { include: { job: { include: { company: true } } } },
+      },
       orderBy: { scheduledAt: "asc" },
       take: 5,
     }),
@@ -54,8 +67,14 @@ export default async function CandidateDashboard() {
       done: docStatus(type) !== "MISSING" && docStatus(type) !== "REJECTED",
       note: docStatus(type) === "VERIFIED" ? "verified" : docStatus(type) === "REJECTED" ? "rejected" : undefined,
     })),
-    { label: "Submitted for review", done: profile.verificationStatus === "PENDING" || profile.verificationStatus === "VERIFIED" },
-    { label: "Verified by Readyhire", done: profile.verificationStatus === "VERIFIED" },
+    {
+      label: "Submitted for review",
+      done: profile.verificationStatus === "PENDING" || profile.verificationStatus === "VERIFIED",
+    },
+    {
+      label: "Verified by Readyhire",
+      done: profile.verificationStatus === "VERIFIED",
+    },
   ];
 
   return (
@@ -73,7 +92,11 @@ export default async function CandidateDashboard() {
           tone={awaiting ? "amber" : "neutral"}
           hint="Recruiters must reply within 72 h"
         />
-        <StatCard label="Upcoming interviews" value={interviews.length} tone={interviews.length ? "violet" : "neutral"} />
+        <StatCard
+          label="Upcoming interviews"
+          value={interviews.length}
+          tone={interviews.length ? "violet" : "neutral"}
+        />
         <StatCard
           label="Active offers (visible to recruiters)"
           value={activeOffers + platformOffers}
@@ -128,7 +151,9 @@ export default async function CandidateDashboard() {
             <div className="space-y-2 text-sm">
               <p className="font-medium text-slate-900">{committed.job.title}</p>
               <p className="text-slate-600">{committed.job.company.name}</p>
-              <p className="text-xs text-slate-500">Committed {profile.committedAt ? timeAgo(profile.committedAt) : ""}</p>
+              <p className="text-xs text-slate-500">
+                Committed {profile.committedAt ? timeAgo(profile.committedAt) : ""}
+              </p>
               <Link href={`/candidate/applications/${committed.id}`} className={buttonClass("secondary", "sm")}>
                 View application
               </Link>
@@ -159,7 +184,10 @@ export default async function CandidateDashboard() {
                     </p>
                     <p className="text-xs text-slate-500">{formatDateTime(i.scheduledAt)}</p>
                   </div>
-                  <Link href={`/candidate/applications/${i.applicationId}`} className={buttonClass(i.candidateConfirmed ? "ghost" : "primary", "sm")}>
+                  <Link
+                    href={`/candidate/applications/${i.applicationId}`}
+                    className={buttonClass(i.candidateConfirmed ? "ghost" : "primary", "sm")}
+                  >
                     {i.candidateConfirmed ? "Confirmed" : "Confirm"}
                   </Link>
                 </li>

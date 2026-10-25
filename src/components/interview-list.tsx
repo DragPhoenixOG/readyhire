@@ -40,12 +40,18 @@ export function InterviewList<T extends InterviewItem>({
                 ))}
             </p>
             <p className="text-slate-600">
-              {formatDateTime(interview.scheduledAt)} · {interview.durationMins} min · {INTERVIEW_MODE_LABEL[interview.mode]}
+              {formatDateTime(interview.scheduledAt)} · {interview.durationMins} min ·{" "}
+              {INTERVIEW_MODE_LABEL[interview.mode]}
             </p>
             {interview.location && (
               <p className="break-all text-slate-600">
                 {/^https?:\/\//.test(interview.location) ? (
-                  <a href={interview.location} target="_blank" rel="noreferrer" className="text-brand-700 hover:underline">
+                  <a
+                    href={interview.location}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-brand-700 hover:underline"
+                  >
                     {interview.location}
                   </a>
                 ) : (

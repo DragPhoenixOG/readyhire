@@ -31,7 +31,10 @@ export default async function VerificationsPage({ searchParams }: PageProps<"/ad
 
   return (
     <>
-      <PageHeader title="Candidate verifications" description="Check every required document, then approve or send back with a reason." />
+      <PageHeader
+        title="Candidate verifications"
+        description="Check every required document, then approve or send back with a reason."
+      />
       <nav className="mb-4 flex flex-wrap gap-2" aria-label="Verification status">
         {ORDER.map((s) => (
           <Link
@@ -40,7 +43,9 @@ export default async function VerificationsPage({ searchParams }: PageProps<"/ad
             aria-current={s === status ? "page" : undefined}
             className={cx(
               "rounded-full px-3 py-1.5 text-sm font-medium ring-1 ring-inset",
-              s === status ? "bg-brand-700 text-white ring-brand-700" : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50",
+              s === status
+                ? "bg-brand-700 text-white ring-brand-700"
+                : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50",
             )}
           >
             {VERIFICATION_STATUS_LABEL[s]}{" "}
@@ -52,7 +57,16 @@ export default async function VerificationsPage({ searchParams }: PageProps<"/ad
         <EmptyState title="Nothing here" />
       ) : (
         <Card bodyClassName="px-2 py-2">
-          <Table head={["Candidate", "City", "Submitted", "Notice", ...REQUIRED_DOCUMENTS.map((t) => DOCUMENT_INFO[t].label), "Status"]}>
+          <Table
+            head={[
+              "Candidate",
+              "City",
+              "Submitted",
+              "Notice",
+              ...REQUIRED_DOCUMENTS.map((t) => DOCUMENT_INFO[t].label),
+              "Status",
+            ]}
+          >
             {candidates.map((c) => (
               <tr key={c.id} className="hover:bg-slate-50">
                 <Td>
@@ -64,14 +78,22 @@ export default async function VerificationsPage({ searchParams }: PageProps<"/ad
                 </Td>
                 <Td>{c.city ?? "—"}</Td>
                 <Td className="whitespace-nowrap">{c.submittedAt ? timeAgo(c.submittedAt) : "—"}</Td>
-                <Td className="whitespace-nowrap text-xs">
+                <Td className="text-xs whitespace-nowrap">
                   {c.noticePeriodDays != null ? `${c.noticePeriodDays} d` : "—"}
                   <br />
                   LWD {formatDate(c.lastWorkingDay)}
                 </Td>
                 {REQUIRED_DOCUMENTS.map((t) => {
                   const doc = c.documents.find((d) => d.type === t);
-                  return <Td key={t}>{doc ? <DocumentStatusBadge status={doc.status} /> : <span className="text-xs text-slate-400">Missing</span>}</Td>;
+                  return (
+                    <Td key={t}>
+                      {doc ? (
+                        <DocumentStatusBadge status={doc.status} />
+                      ) : (
+                        <span className="text-xs text-slate-400">Missing</span>
+                      )}
+                    </Td>
+                  );
                 })}
                 <Td>
                   <VerificationBadge status={c.verificationStatus} />

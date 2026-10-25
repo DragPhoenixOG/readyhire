@@ -21,7 +21,12 @@ export default async function CandidateSignupPage() {
             Sign up as a recruiter
           </Link>
         </p>
-        <ActionForm action={signupCandidate} submitLabel="Create account" pendingLabel="Creating account…" className="mt-6">
+        <ActionForm
+          action={signupCandidate}
+          submitLabel="Create account"
+          pendingLabel="Creating account…"
+          className="mt-6"
+        >
           <Field label="Full name" htmlFor="name">
             <input id="name" name="name" autoComplete="name" required className={inputClass} />
           </Field>

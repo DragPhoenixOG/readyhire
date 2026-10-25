@@ -27,10 +27,16 @@ export default async function AuditLogPage() {
           <Table head={["When", "Who", "Action", "Record", "Details"]}>
             {entries.map((e) => (
               <tr key={e.id}>
-                <Td className="whitespace-nowrap text-xs">{formatDateTime(e.createdAt)}</Td>
-                <Td>{e.actor ? <span title={e.actor.email}>{e.actor.name}</span> : <span className="text-slate-400">System</span>}</Td>
-                <Td className="whitespace-nowrap font-mono text-xs">{e.action}</Td>
-                <Td className="whitespace-nowrap text-xs text-slate-500">
+                <Td className="text-xs whitespace-nowrap">{formatDateTime(e.createdAt)}</Td>
+                <Td>
+                  {e.actor ? (
+                    <span title={e.actor.email}>{e.actor.name}</span>
+                  ) : (
+                    <span className="text-slate-400">System</span>
+                  )}
+                </Td>
+                <Td className="font-mono text-xs whitespace-nowrap">{e.action}</Td>
+                <Td className="text-xs whitespace-nowrap text-slate-500">
                   {e.entityType} · {e.entityId.slice(-8)}
                 </Td>
                 <Td className="max-w-md text-sm">{e.summary}</Td>

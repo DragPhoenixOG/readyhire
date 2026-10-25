@@ -12,7 +12,12 @@ export default function ForgotPasswordPage() {
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs sm:p-8">
         <h1 className="text-2xl font-semibold tracking-tight">Reset your password</h1>
         <p className="mt-2 text-sm text-slate-600">We&apos;ll email you a link to choose a new password.</p>
-        <ActionForm action={requestPasswordReset} submitLabel="Email me a reset link" pendingLabel="Sending…" className="mt-6">
+        <ActionForm
+          action={requestPasswordReset}
+          submitLabel="Email me a reset link"
+          pendingLabel="Sending…"
+          className="mt-6"
+        >
           <Field label="Email" htmlFor="email">
             <input id="email" name="email" type="email" autoComplete="email" required className={inputClass} />
           </Field>

@@ -17,10 +17,22 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
       root="/admin"
       nav={[
         { href: "/admin", label: "Dashboard" },
-        { href: "/admin/verifications", label: "Verifications", count: pendingVerifications },
-        { href: "/admin/recruiters", label: "Recruiters", count: pendingRecruiters },
+        {
+          href: "/admin/verifications",
+          label: "Verifications",
+          count: pendingVerifications,
+        },
+        {
+          href: "/admin/recruiters",
+          label: "Recruiters",
+          count: pendingRecruiters,
+        },
         { href: "/admin/applications", label: "Applications" },
-        { href: "/admin/reports", label: "Ghosting reports", count: openReports },
+        {
+          href: "/admin/reports",
+          label: "Ghosting reports",
+          count: openReports,
+        },
         { href: "/admin/users", label: "Users" },
         { href: "/admin/audit", label: "Audit log" },
       ]}

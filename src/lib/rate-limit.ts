@@ -31,5 +31,9 @@ export function retryMessage(seconds: number) {
 
 /** Old windows are harmless but accumulate; the reminder cron prunes them. */
 export async function pruneRateLimits(olderThanSeconds = 24 * 60 * 60) {
-  await db.rateLimit.deleteMany({ where: { windowStart: { lt: new Date(Date.now() - olderThanSeconds * 1000) } } });
+  await db.rateLimit.deleteMany({
+    where: {
+      windowStart: { lt: new Date(Date.now() - olderThanSeconds * 1000) },
+    },
+  });
 }

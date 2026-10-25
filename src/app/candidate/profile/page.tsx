@@ -35,7 +35,9 @@ export default async function CandidateProfilePage() {
             <Field
               label="Current company"
               htmlFor="currentCompany"
-              hint={companyLocked ? "Locked while verification is pending or complete." : "Must match your offer letter."}
+              hint={
+                companyLocked ? "Locked while verification is pending or complete." : "Must match your offer letter."
+              }
             >
               <input
                 id="currentCompany"
@@ -46,7 +48,12 @@ export default async function CandidateProfilePage() {
               />
             </Field>
             <Field label="Current title" htmlFor="currentTitle">
-              <input id="currentTitle" name="currentTitle" defaultValue={profile.currentTitle ?? ""} className={inputClass} />
+              <input
+                id="currentTitle"
+                name="currentTitle"
+                defaultValue={profile.currentTitle ?? ""}
+                className={inputClass}
+              />
             </Field>
             <Field label="Total experience (years)" htmlFor="experienceYears">
               <input

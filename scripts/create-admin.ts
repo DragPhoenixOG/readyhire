@@ -7,7 +7,9 @@ import { parseArgs } from "node:util";
 import { createScriptClient } from "./support";
 
 async function main() {
-  const { values } = parseArgs({ options: { email: { type: "string" }, name: { type: "string" } } });
+  const { values } = parseArgs({
+    options: { email: { type: "string" }, name: { type: "string" } },
+  });
   const email = values.email?.trim().toLowerCase();
   const name = values.name?.trim();
   if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || !name) {
@@ -37,7 +39,13 @@ async function main() {
       },
     });
     await db.auditLog.create({
-      data: { actorId: null, action: "ADMIN_CREATED", entityType: "User", entityId: admin.id, summary: `${email} via create-admin` },
+      data: {
+        actorId: null,
+        action: "ADMIN_CREATED",
+        entityType: "User",
+        entityId: admin.id,
+        summary: `${email} via create-admin`,
+      },
     });
     console.log(`Created admin ${email}.`);
     if (!process.env.ADMIN_PASSWORD) {

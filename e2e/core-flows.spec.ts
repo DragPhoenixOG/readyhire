@@ -140,7 +140,9 @@ test("every application gets an accept with a message or a reject with a reason"
   };
   await applyTo("QA Automation Engineer");
   await applyTo("Data Engineer");
-  await expect.poll(() => sentEmails("priya.menon@northwind.com").filter((e) => /New application/.test(e.subject)).length).toBe(2);
+  await expect
+    .poll(() => sentEmails("priya.menon@northwind.com").filter((e) => /New application/.test(e.subject)).length)
+    .toBe(2);
 
   const priya = await signIn(browser, "priya.menon@northwind.com");
   const openApplication = async (job: string) => {
@@ -173,7 +175,9 @@ test("every application gets an accept with a message or a reject with a reason"
   await expect(neha.getByRole("row").filter({ hasText: "Data Engineer" })).toContainText(
     "We need production Spark experience for this role.",
   );
-  await expect.poll(() => sentEmails("neha.gupta@example.com").some((e) => /accepted your application/.test(e.subject))).toBe(true);
+  await expect
+    .poll(() => sentEmails("neha.gupta@example.com").some((e) => /accepted your application/.test(e.subject)))
+    .toBe(true);
 });
 
 test("a candidate can commit to only one role at a time", async ({ browser }) => {
@@ -201,7 +205,9 @@ test("overdue responses pause job posting and trigger a reminder", async ({ brow
   await expect(arjun.getByText("Posting is paused")).toBeVisible();
 
   expect((await request.get("/api/cron/reminders")).status()).toBe(401);
-  const run = await request.get("/api/cron/reminders", { headers: { Authorization: `Bearer ${e2eEnv.CRON_SECRET}` } });
+  const run = await request.get("/api/cron/reminders", {
+    headers: { Authorization: `Bearer ${e2eEnv.CRON_SECRET}` },
+  });
   expect(run.ok()).toBe(true);
   expect(sentEmails("arjun.rao@contoso.com").some((e) => /overdue/.test(e.subject))).toBe(true);
 });

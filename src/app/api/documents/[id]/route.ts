@@ -21,6 +21,10 @@ export async function GET(_request: Request, { params }: RouteContext<"/api/docu
   const url = await documentStore().downloadUrl(document.storageKey, document.fileName, document.mimeType);
   return new Response(null, {
     status: 302,
-    headers: { Location: url, "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer" },
+    headers: {
+      Location: url,
+      "Cache-Control": "private, no-store",
+      "Referrer-Policy": "no-referrer",
+    },
   });
 }

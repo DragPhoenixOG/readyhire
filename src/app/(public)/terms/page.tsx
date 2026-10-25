@@ -26,9 +26,7 @@ const sections = [
   },
   {
     title: "Enforcement",
-    rules: [
-      "Readyhire may flag or restrict any account that breaks these rules. Restricted accounts can't sign in.",
-    ],
+    rules: ["Readyhire may flag or restrict any account that breaks these rules. Restricted accounts can't sign in."],
   },
 ];
 

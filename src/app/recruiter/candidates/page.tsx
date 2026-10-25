@@ -16,7 +16,8 @@ export default async function TalentPoolPage({ searchParams }: PageProps<"/recru
   const { recruiter } = await requireApprovedRecruiter();
   const params = await searchParams;
   const q = typeof params.q === "string" ? params.q.trim() : "";
-  const city = typeof params.city === "string" && (CITIES as readonly string[]).includes(params.city) ? params.city : "";
+  const city =
+    typeof params.city === "string" && (CITIES as readonly string[]).includes(params.city) ? params.city : "";
   const within = typeof params.within === "string" && /^\d+$/.test(params.within) ? Number(params.within) : null;
   const uncommitted = params.uncommitted === "1";
 
@@ -50,7 +51,13 @@ export default async function TalentPoolPage({ searchParams }: PageProps<"/recru
         description="Only candidates whose notice period, resignation and offer letter have been verified by Readyhire."
       />
       <form className="mb-6 flex flex-wrap gap-2" role="search">
-        <input name="q" defaultValue={q} placeholder="Skill, title or name" aria-label="Search candidates" className={`${inlineInputClass} w-full max-w-xs`} />
+        <input
+          name="q"
+          defaultValue={q}
+          placeholder="Skill, title or name"
+          aria-label="Search candidates"
+          className={`${inlineInputClass} w-full max-w-xs`}
+        />
         <select name="city" defaultValue={city} aria-label="City" className={inlineInputClass}>
           <option value="">Any city</option>
           {CITIES.map((c) => (
@@ -64,7 +71,14 @@ export default async function TalentPoolPage({ searchParams }: PageProps<"/recru
           <option value="60">Within 60 days</option>
         </select>
         <label className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-700">
-          <input type="checkbox" name="uncommitted" value="1" defaultChecked={uncommitted} className="accent-brand-700" /> Not committed
+          <input
+            type="checkbox"
+            name="uncommitted"
+            value="1"
+            defaultChecked={uncommitted}
+            className="accent-brand-700"
+          />{" "}
+          Not committed
         </label>
         <button type="submit" className={buttonClass("secondary")}>
           Filter
@@ -100,13 +114,16 @@ export default async function TalentPoolPage({ searchParams }: PageProps<"/recru
                   <div className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-sm">
                     <p className="font-medium text-slate-900">{joinabilityLabel(summary.notice)}</p>
                     <p className="text-xs text-slate-500">
-                      {c.noticePeriodDays}-day notice · resigned {formatDate(c.resignationDate)} · LWD {formatDate(c.lastWorkingDay)}
+                      {c.noticePeriodDays}-day notice · resigned {formatDate(c.resignationDate)} · LWD{" "}
+                      {formatDate(c.lastWorkingDay)}
                     </p>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-1.5">
                     <OffersBadge summary={summary} />
                     <CommitmentBadge summary={summary} recruiterId={recruiter.id} />
-                    {summary.upheldGhosting > 0 && <Badge tone="red">{summary.upheldGhosting} ghosting report(s)</Badge>}
+                    {summary.upheldGhosting > 0 && (
+                      <Badge tone="red">{summary.upheldGhosting} ghosting report(s)</Badge>
+                    )}
                   </div>
                   <div className="mt-3">
                     <Chips items={splitList(c.skills).slice(0, 6)} />

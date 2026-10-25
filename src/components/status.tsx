@@ -34,7 +34,11 @@ export function VerificationBadge({ status }: { status: VerificationStatus }) {
   );
 }
 
-const documentTone: Record<DocumentStatus, Tone> = { PENDING: "amber", VERIFIED: "green", REJECTED: "red" };
+const documentTone: Record<DocumentStatus, Tone> = {
+  PENDING: "amber",
+  VERIFIED: "green",
+  REJECTED: "red",
+};
 
 export function DocumentStatusBadge({ status }: { status: DocumentStatus }) {
   return <Badge tone={documentTone[status]}>{DOCUMENT_STATUS_LABEL[status]}</Badge>;
@@ -55,13 +59,22 @@ export function ApplicationStatusBadge({ status }: { status: ApplicationStatus }
   return <Badge tone={applicationTone[status]}>{APPLICATION_STATUS_LABEL[status]}</Badge>;
 }
 
-const approvalTone: Record<ApprovalStatus, Tone> = { PENDING: "amber", APPROVED: "green", REJECTED: "red" };
+const approvalTone: Record<ApprovalStatus, Tone> = {
+  PENDING: "amber",
+  APPROVED: "green",
+  REJECTED: "red",
+};
 
 export function ApprovalBadge({ status }: { status: ApprovalStatus }) {
   return <Badge tone={approvalTone[status]}>{APPROVAL_STATUS_LABEL[status]}</Badge>;
 }
 
-const offerTone: Record<OfferStatus, Tone> = { HOLDING: "amber", ACCEPTED: "blue", DECLINED: "neutral", EXPIRED: "neutral" };
+const offerTone: Record<OfferStatus, Tone> = {
+  HOLDING: "amber",
+  ACCEPTED: "blue",
+  DECLINED: "neutral",
+  EXPIRED: "neutral",
+};
 
 export function OfferStatusBadge({ status }: { status: OfferStatus }) {
   return <Badge tone={offerTone[status]}>{OFFER_STATUS_LABEL[status]}</Badge>;
@@ -78,7 +91,11 @@ export function InterviewStatusBadge({ status }: { status: InterviewStatus }) {
   return <Badge tone={interviewTone[status]}>{INTERVIEW_STATUS_LABEL[status]}</Badge>;
 }
 
-const reportTone: Record<ReportStatus, Tone> = { OPEN: "amber", UPHELD: "red", DISMISSED: "neutral" };
+const reportTone: Record<ReportStatus, Tone> = {
+  OPEN: "amber",
+  UPHELD: "red",
+  DISMISSED: "neutral",
+};
 
 export function ReportStatusBadge({ status }: { status: ReportStatus }) {
   return <Badge tone={reportTone[status]}>{REPORT_STATUS_LABEL[status]}</Badge>;

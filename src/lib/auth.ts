@@ -5,13 +5,7 @@ import { redirect } from "next/navigation";
 import { cache } from "react";
 import type { Role } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
-import {
-  SESSION_COOKIE,
-  SESSION_TTL_SECONDS,
-  decodeSession,
-  encodeSession,
-  homePathFor,
-} from "@/lib/session";
+import { SESSION_COOKIE, SESSION_TTL_SECONDS, decodeSession, encodeSession, homePathFor } from "@/lib/session";
 
 export async function hashPassword(password: string) {
   return bcrypt.hash(password, 12);
@@ -28,7 +22,11 @@ export async function verifyPasswordOrDummy(password: string, hash: string | und
 }
 
 export async function startSession(user: { id: string; role: Role; sessionVersion: number }) {
-  const token = await encodeSession({ userId: user.id, role: user.role, sv: user.sessionVersion });
+  const token = await encodeSession({
+    userId: user.id,
+    role: user.role,
+    sv: user.sessionVersion,
+  });
   (await cookies()).set(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -88,7 +86,9 @@ export async function requireRole(role: Role): Promise<CurrentUser> {
 
 export const requireCandidate = cache(async () => {
   const user = await requireRole("CANDIDATE");
-  const profile = await db.candidateProfile.findUnique({ where: { userId: user.id } });
+  const profile = await db.candidateProfile.findUnique({
+    where: { userId: user.id },
+  });
   if (!profile) redirect("/login");
   return { user, profile };
 });

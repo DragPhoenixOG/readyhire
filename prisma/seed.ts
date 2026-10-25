@@ -78,7 +78,9 @@ async function wipe() {
   const files = await db.document.findMany({ select: { storageKey: true } });
   await Promise.all(files.map((f) => store.remove(f.storageKey)));
   // Break the candidate <-> application commitment cycle before deleting.
-  await db.candidateProfile.updateMany({ data: { committedApplicationId: null } });
+  await db.candidateProfile.updateMany({
+    data: { committedApplicationId: null },
+  });
   await db.applicationEvent.deleteMany();
   await db.interview.deleteMany();
   await db.ghostingReport.deleteMany();
@@ -112,13 +114,28 @@ async function main() {
 
   // ───────────── Companies & recruiters ─────────────
   const northwind = await db.company.create({
-    data: { name: "Northwind Global Capability Center", domain: "northwind.com", website: "northwind.com", city: "Hyderabad" },
+    data: {
+      name: "Northwind Global Capability Center",
+      domain: "northwind.com",
+      website: "northwind.com",
+      city: "Hyderabad",
+    },
   });
   const contoso = await db.company.create({
-    data: { name: "Contoso Technology Centre", domain: "contoso.com", website: "https://www.contoso.com", city: "Bengaluru" },
+    data: {
+      name: "Contoso Technology Centre",
+      domain: "contoso.com",
+      website: "https://www.contoso.com",
+      city: "Bengaluru",
+    },
   });
   const fabrikam = await db.company.create({
-    data: { name: "Fabrikam Labs", domain: "fabrikam.io", website: "fabrikam.io", city: "Bengaluru" },
+    data: {
+      name: "Fabrikam Labs",
+      domain: "fabrikam.io",
+      website: "fabrikam.io",
+      city: "Bengaluru",
+    },
   });
 
   async function recruiter(
@@ -145,7 +162,11 @@ async function main() {
             approvalStatus,
             createdAt,
             ...(approvalStatus === "APPROVED"
-              ? { reviewedAt: new Date(createdAt.getTime() + 6 * HOUR), reviewedById: admin.id, reviewNote: "Domain matches company website." }
+              ? {
+                  reviewedAt: new Date(createdAt.getTime() + 6 * HOUR),
+                  reviewedById: admin.id,
+                  reviewNote: "Domain matches company website.",
+                }
               : {}),
           },
         },
@@ -155,8 +176,22 @@ async function main() {
     return { user, profile: user.recruiter! };
   }
 
-  const priya = await recruiter("Priya Menon", "priya.menon@northwind.com", northwind.id, "Talent Acquisition Lead", "APPROVED", daysAgo(60));
-  const arjun = await recruiter("Arjun Rao", "arjun.rao@contoso.com", contoso.id, "Senior Recruiter", "APPROVED", daysAgo(45));
+  const priya = await recruiter(
+    "Priya Menon",
+    "priya.menon@northwind.com",
+    northwind.id,
+    "Talent Acquisition Lead",
+    "APPROVED",
+    daysAgo(60),
+  );
+  const arjun = await recruiter(
+    "Arjun Rao",
+    "arjun.rao@contoso.com",
+    contoso.id,
+    "Senior Recruiter",
+    "APPROVED",
+    daysAgo(45),
+  );
   await recruiter("Kavya Iyer", "kavya.iyer@fabrikam.io", fabrikam.id, "HR Business Partner", "PENDING", hoursAgo(20));
 
   // ───────────── Jobs ─────────────
@@ -281,13 +316,28 @@ async function main() {
     method?: VerificationMethod;
     rejectionReason?: string;
     docs?: Partial<Record<Exclude<DocumentType, "OTHER_OFFER">, DocSpec>>;
-    offers?: { company: string; role: string; ctc: number; status: OfferStatus; joiningIn: number; proof?: DocumentStatus }[];
+    offers?: {
+      company: string;
+      role: string;
+      ctc: number;
+      status: OfferStatus;
+      joiningIn: number;
+      proof?: DocumentStatus;
+    }[];
     signedUpDaysAgo: number;
     restricted?: string;
     flagged?: string;
   };
 
-  async function storeDoc(candidateId: string, type: DocumentType, fileName: string, title: string, lines: string[], spec: DocSpec, uploadedAt: Date) {
+  async function storeDoc(
+    candidateId: string,
+    type: DocumentType,
+    fileName: string,
+    title: string,
+    lines: string[],
+    spec: DocSpec,
+    uploadedAt: Date,
+  ) {
     const storageKey = `candidates/${candidateId}/${randomUUID()}.pdf`;
     const bytes = makePdf(title, lines);
     await store.put(storageKey, bytes, "application/pdf");
@@ -363,12 +413,19 @@ async function main() {
       OFFER_LETTER: {
         file: `appointment-letter-${company.toLowerCase().replace(/[^a-z]+/g, "-")}.pdf`,
         title: `${company} - Letter of Appointment`,
-        lines: [`Employee: ${spec.name}`, `Designation: ${spec.title ?? "-"}`, `Notice period: ${spec.notice?.days ?? "-"} days`],
+        lines: [
+          `Employee: ${spec.name}`,
+          `Designation: ${spec.title ?? "-"}`,
+          `Notice period: ${spec.notice?.days ?? "-"} days`,
+        ],
       },
       NOTICE_POLICY: {
         file: "notice-period-policy.pdf",
         title: `${company} - Separation & Notice Policy`,
-        lines: [`Employees at this grade serve a notice period of ${spec.notice?.days ?? "-"} days.`, "Buy-out at the discretion of the manager."],
+        lines: [
+          `Employees at this grade serve a notice period of ${spec.notice?.days ?? "-"} days.`,
+          "Buy-out at the discretion of the manager.",
+        ],
       },
       RESIGNATION_PROOF: {
         file: "resignation-acceptance.pdf",
@@ -381,7 +438,10 @@ async function main() {
         ],
       },
     };
-    for (const [type, docSpec] of Object.entries(spec.docs ?? {}) as [Exclude<DocumentType, "OTHER_OFFER">, DocSpec][]) {
+    for (const [type, docSpec] of Object.entries(spec.docs ?? {}) as [
+      Exclude<DocumentType, "OTHER_OFFER">,
+      DocSpec,
+    ][]) {
       const t = docText[type];
       await storeDoc(profile.id, type, t.file, t.title, t.lines, docSpec, new Date(signedUp.getTime() + HOUR));
     }
@@ -434,7 +494,16 @@ async function main() {
     verification: "VERIFIED",
     method: "SCREEN_SHARE",
     docs: allVerified,
-    offers: [{ company: "Tailspin Toys", role: "Lead Engineer", ctc: 34, status: "HOLDING", joiningIn: 35, proof: "VERIFIED" }],
+    offers: [
+      {
+        company: "Tailspin Toys",
+        role: "Lead Engineer",
+        ctc: 34,
+        status: "HOLDING",
+        joiningIn: 35,
+        proof: "VERIFIED",
+      },
+    ],
     signedUpDaysAgo: 28,
   });
   await candidate({
@@ -449,7 +518,11 @@ async function main() {
     skills: "Kubernetes, Terraform, AWS, Jenkins, Prometheus",
     notice: { days: 90, resignedDaysAgo: 20 },
     verification: "PENDING",
-    docs: { OFFER_LETTER: { status: "PENDING" }, NOTICE_POLICY: { status: "PENDING" }, RESIGNATION_PROOF: { status: "PENDING" } },
+    docs: {
+      OFFER_LETTER: { status: "PENDING" },
+      NOTICE_POLICY: { status: "PENDING" },
+      RESIGNATION_PROOF: { status: "PENDING" },
+    },
     signedUpDaysAgo: 1,
   });
   await candidate({
@@ -475,8 +548,21 @@ async function main() {
     method: "IN_PERSON",
     docs: allVerified,
     offers: [
-      { company: "Wingtip Toys", role: "Platform Engineer", ctc: 30, status: "HOLDING", joiningIn: 12, proof: "VERIFIED" },
-      { company: "Lucerne Publishing", role: "SRE", ctc: 27, status: "ACCEPTED", joiningIn: 8 },
+      {
+        company: "Wingtip Toys",
+        role: "Platform Engineer",
+        ctc: 30,
+        status: "HOLDING",
+        joiningIn: 12,
+        proof: "VERIFIED",
+      },
+      {
+        company: "Lucerne Publishing",
+        role: "SRE",
+        ctc: 27,
+        status: "ACCEPTED",
+        joiningIn: 8,
+      },
     ],
     signedUpDaysAgo: 24,
   });
@@ -524,11 +610,15 @@ async function main() {
     skills: "Selenium, Java, Postman, SQL",
     notice: { days: 60, resignedDaysAgo: 5 },
     verification: "REJECTED",
-    rejectionReason: "Your resignation evidence doesn't show HR's acknowledgement. Upload the acceptance email or an HRMS screenshot.",
+    rejectionReason:
+      "Your resignation evidence doesn't show HR's acknowledgement. Upload the acceptance email or an HRMS screenshot.",
     docs: {
       OFFER_LETTER: { status: "VERIFIED" },
       NOTICE_POLICY: { status: "VERIFIED" },
-      RESIGNATION_PROOF: { status: "REJECTED", note: "Only the outgoing resignation email is visible; no acknowledgement from HR." },
+      RESIGNATION_PROOF: {
+        status: "REJECTED",
+        note: "Only the outgoing resignation email is visible; no acknowledgement from HR.",
+      },
     },
     signedUpDaysAgo: 4,
   });
@@ -546,7 +636,15 @@ async function main() {
     verification: "VERIFIED",
     method: "SCREEN_SHARE",
     docs: allVerified,
-    offers: [{ company: "Coho Vineyard", role: "SDET II", ctc: 21, status: "ACCEPTED", joiningIn: -10 }],
+    offers: [
+      {
+        company: "Coho Vineyard",
+        role: "SDET II",
+        ctc: 21,
+        status: "ACCEPTED",
+        joiningIn: -10,
+      },
+    ],
     signedUpDaysAgo: 48,
     flagged: "Did not join Northwind after committing; ghosting report under review.",
   });
@@ -595,14 +693,22 @@ async function main() {
     docs: {
       OFFER_LETTER: { status: "VERIFIED" },
       NOTICE_POLICY: { status: "VERIFIED" },
-      RESIGNATION_PROOF: { status: "REJECTED", note: "Employer HR confirmed no resignation is on record." },
+      RESIGNATION_PROOF: {
+        status: "REJECTED",
+        note: "Employer HR confirmed no resignation is on record.",
+      },
     },
     signedUpDaysAgo: 7,
     restricted: "Submitted a resignation letter the employer could not validate.",
   });
 
   // ───────────── Applications ─────────────
-  type Step = { type: string; by: "candidate" | "recruiter"; at: Date; message?: string };
+  type Step = {
+    type: string;
+    by: "candidate" | "recruiter";
+    at: Date;
+    message?: string;
+  };
   async function application(opts: {
     jobId: string;
     candidate: { user: { id: string }; profile: { id: string } };
@@ -637,7 +743,15 @@ async function main() {
         createdAt: opts.appliedAt,
       },
     });
-    const steps: Step[] = [{ type: "APPLIED", by: "candidate", at: opts.appliedAt, message: opts.coverNote }, ...(opts.steps ?? [])];
+    const steps: Step[] = [
+      {
+        type: "APPLIED",
+        by: "candidate",
+        at: opts.appliedAt,
+        message: opts.coverNote,
+      },
+      ...(opts.steps ?? []),
+    ];
     for (const step of steps) {
       await db.applicationEvent.create({
         data: {
@@ -663,25 +777,83 @@ async function main() {
     respondedAt: daysAgo(9),
     responseMessage: "Thanks Ananya — your Kafka experience is a strong fit. First up is a 60-minute technical round.",
     steps: [
-      { type: "ACCEPTED", by: "recruiter", at: daysAgo(9), message: "Thanks Ananya — your Kafka experience is a strong fit. First up is a 60-minute technical round." },
-      { type: "INTERVIEW_SCHEDULED", by: "recruiter", at: daysAgo(9), message: "Technical round 1" },
-      { type: "INTERVIEW_CONFIRMED", by: "candidate", at: daysAgo(8), message: "Technical round 1" },
-      { type: "INTERVIEW_UPDATED", by: "recruiter", at: daysAgo(5), message: "Technical round 1 completed" },
+      {
+        type: "ACCEPTED",
+        by: "recruiter",
+        at: daysAgo(9),
+        message: "Thanks Ananya — your Kafka experience is a strong fit. First up is a 60-minute technical round.",
+      },
+      {
+        type: "INTERVIEW_SCHEDULED",
+        by: "recruiter",
+        at: daysAgo(9),
+        message: "Technical round 1",
+      },
+      {
+        type: "INTERVIEW_CONFIRMED",
+        by: "candidate",
+        at: daysAgo(8),
+        message: "Technical round 1",
+      },
+      {
+        type: "INTERVIEW_UPDATED",
+        by: "recruiter",
+        at: daysAgo(5),
+        message: "Technical round 1 completed",
+      },
       { type: "COMMITTED", by: "candidate", at: daysAgo(4) },
-      { type: "INTERVIEW_SCHEDULED", by: "recruiter", at: daysAgo(3), message: "System design" },
-      { type: "INTERVIEW_CONFIRMED", by: "candidate", at: daysAgo(3), message: "System design" },
+      {
+        type: "INTERVIEW_SCHEDULED",
+        by: "recruiter",
+        at: daysAgo(3),
+        message: "System design",
+      },
+      {
+        type: "INTERVIEW_CONFIRMED",
+        by: "candidate",
+        at: daysAgo(3),
+        message: "System design",
+      },
     ],
   });
   await db.interview.createMany({
     data: [
-      { applicationId: ananyaBackend.id, round: "Technical round 1", scheduledAt: istAt(-5, 11), durationMins: 60, mode: "VIDEO", location: "https://meet.example.com/nw-tech-1", status: "COMPLETED", candidateConfirmed: true },
-      { applicationId: ananyaBackend.id, round: "System design", scheduledAt: istAt(2, 10, 30), durationMins: 60, mode: "READYHIRE_ROOM", location: "Readyhire Room — HITEC City, Hyderabad", notes: "Carry a government ID.", candidateConfirmed: true },
+      {
+        applicationId: ananyaBackend.id,
+        round: "Technical round 1",
+        scheduledAt: istAt(-5, 11),
+        durationMins: 60,
+        mode: "VIDEO",
+        location: "https://meet.example.com/nw-tech-1",
+        status: "COMPLETED",
+        candidateConfirmed: true,
+      },
+      {
+        applicationId: ananyaBackend.id,
+        round: "System design",
+        scheduledAt: istAt(2, 10, 30),
+        durationMins: 60,
+        mode: "READYHIRE_ROOM",
+        location: "Readyhire Room — HITEC City, Hyderabad",
+        notes: "Carry a government ID.",
+        candidateConfirmed: true,
+      },
     ],
   });
-  await db.candidateProfile.update({ where: { id: ananya.profile.id }, data: { committedApplicationId: ananyaBackend.id, committedAt: daysAgo(4) } });
+  await db.candidateProfile.update({
+    where: { id: ananya.profile.id },
+    data: { committedApplicationId: ananyaBackend.id, committedAt: daysAgo(4) },
+  });
 
   // Ananya → Contoso DevOps: applied before committing, still unanswered (overdue for Arjun).
-  await application({ jobId: devops.id, candidate: ananya, recruiterUserId: arjun.user.id, status: "APPLIED", appliedAt: daysAgo(4.5), coverNote: "Interested in moving closer to platform work." });
+  await application({
+    jobId: devops.id,
+    candidate: ananya,
+    recruiterUserId: arjun.user.id,
+    status: "APPLIED",
+    appliedAt: daysAgo(4.5),
+    coverNote: "Interested in moving closer to platform work.",
+  });
 
   // Vikram → Contoso DevOps: offer extended; not committed and holding other offers.
   const vikramDevops = await application({
@@ -694,18 +866,64 @@ async function main() {
     responseMessage: "Great AKS background. Let's set up two rounds this week.",
     offer: { ctc: 31, joining: istDay(10) },
     steps: [
-      { type: "ACCEPTED", by: "recruiter", at: daysAgo(13), message: "Great AKS background. Let's set up two rounds this week." },
-      { type: "INTERVIEW_SCHEDULED", by: "recruiter", at: daysAgo(13), message: "Platform deep dive" },
-      { type: "INTERVIEW_UPDATED", by: "recruiter", at: daysAgo(9), message: "Platform deep dive completed" },
-      { type: "INTERVIEW_SCHEDULED", by: "recruiter", at: daysAgo(8), message: "Hiring manager" },
-      { type: "INTERVIEW_UPDATED", by: "recruiter", at: daysAgo(5), message: "Hiring manager completed" },
-      { type: "OFFERED", by: "recruiter", at: daysAgo(2), message: "Offer released at 31 LPA, joining in 10 days." },
+      {
+        type: "ACCEPTED",
+        by: "recruiter",
+        at: daysAgo(13),
+        message: "Great AKS background. Let's set up two rounds this week.",
+      },
+      {
+        type: "INTERVIEW_SCHEDULED",
+        by: "recruiter",
+        at: daysAgo(13),
+        message: "Platform deep dive",
+      },
+      {
+        type: "INTERVIEW_UPDATED",
+        by: "recruiter",
+        at: daysAgo(9),
+        message: "Platform deep dive completed",
+      },
+      {
+        type: "INTERVIEW_SCHEDULED",
+        by: "recruiter",
+        at: daysAgo(8),
+        message: "Hiring manager",
+      },
+      {
+        type: "INTERVIEW_UPDATED",
+        by: "recruiter",
+        at: daysAgo(5),
+        message: "Hiring manager completed",
+      },
+      {
+        type: "OFFERED",
+        by: "recruiter",
+        at: daysAgo(2),
+        message: "Offer released at 31 LPA, joining in 10 days.",
+      },
     ],
   });
   await db.interview.createMany({
     data: [
-      { applicationId: vikramDevops.id, round: "Platform deep dive", scheduledAt: istAt(-9, 15), mode: "VIDEO", location: "https://meet.example.com/contoso-pd", status: "COMPLETED", candidateConfirmed: true },
-      { applicationId: vikramDevops.id, round: "Hiring manager", scheduledAt: istAt(-5, 12), mode: "IN_PERSON", location: "Contoso Technology Centre, Bellandur, Bengaluru", status: "COMPLETED", candidateConfirmed: true },
+      {
+        applicationId: vikramDevops.id,
+        round: "Platform deep dive",
+        scheduledAt: istAt(-9, 15),
+        mode: "VIDEO",
+        location: "https://meet.example.com/contoso-pd",
+        status: "COMPLETED",
+        candidateConfirmed: true,
+      },
+      {
+        applicationId: vikramDevops.id,
+        round: "Hiring manager",
+        scheduledAt: istAt(-5, 12),
+        mode: "IN_PERSON",
+        location: "Contoso Technology Centre, Bellandur, Bengaluru",
+        status: "COMPLETED",
+        candidateConfirmed: true,
+      },
     ],
   });
 
@@ -719,14 +937,16 @@ async function main() {
     respondedAt: daysAgo(10),
     rejection: {
       category: "Skills don't match the role",
-      reason: "This role is mostly React component work; your strengths are in cloud infrastructure. Your DevOps application is moving ahead separately.",
+      reason:
+        "This role is mostly React component work; your strengths are in cloud infrastructure. Your DevOps application is moving ahead separately.",
     },
     steps: [
       {
         type: "REJECTED",
         by: "recruiter",
         at: daysAgo(10),
-        message: "Skills don't match the role: This role is mostly React component work; your strengths are in cloud infrastructure.",
+        message:
+          "Skills don't match the role: This role is mostly React component work; your strengths are in cloud infrastructure.",
       },
     ],
   });
@@ -743,9 +963,24 @@ async function main() {
     offer: { ctc: 24, joining: istDay(-3) },
     outcomeAt: daysAgo(2),
     steps: [
-      { type: "ACCEPTED", by: "recruiter", at: daysAgo(37), message: "Your Airflow work matches what we need. Two rounds: technical and manager." },
-      { type: "INTERVIEW_SCHEDULED", by: "recruiter", at: daysAgo(36), message: "Technical" },
-      { type: "INTERVIEW_UPDATED", by: "recruiter", at: daysAgo(33), message: "Technical completed" },
+      {
+        type: "ACCEPTED",
+        by: "recruiter",
+        at: daysAgo(37),
+        message: "Your Airflow work matches what we need. Two rounds: technical and manager.",
+      },
+      {
+        type: "INTERVIEW_SCHEDULED",
+        by: "recruiter",
+        at: daysAgo(36),
+        message: "Technical",
+      },
+      {
+        type: "INTERVIEW_UPDATED",
+        by: "recruiter",
+        at: daysAgo(33),
+        message: "Technical completed",
+      },
       { type: "OFFERED", by: "recruiter", at: daysAgo(30) },
       { type: "COMMITTED", by: "candidate", at: daysAgo(29) },
       { type: "JOINED", by: "recruiter", at: daysAgo(2) },
@@ -773,7 +1008,14 @@ async function main() {
       category: "Experience level doesn't match",
       reason: "We need 3+ years of hands-on test automation; your experience is mainly feature development.",
     },
-    steps: [{ type: "REJECTED", by: "recruiter", at: daysAgo(11), message: "Experience level doesn't match: We need 3+ years of hands-on test automation." }],
+    steps: [
+      {
+        type: "REJECTED",
+        by: "recruiter",
+        at: daysAgo(11),
+        message: "Experience level doesn't match: We need 3+ years of hands-on test automation.",
+      },
+    ],
   });
 
   // Rahul → Northwind QA: committed, offered, then did not join → ghosting report.
@@ -789,17 +1031,50 @@ async function main() {
     outcomeAt: daysAgo(6),
     notJoinedReason: "Did not report on the joining day and stopped answering calls and email.",
     steps: [
-      { type: "ACCEPTED", by: "recruiter", at: daysAgo(39), message: "Strong Playwright background — let's talk." },
-      { type: "INTERVIEW_SCHEDULED", by: "recruiter", at: daysAgo(38), message: "Automation exercise" },
-      { type: "INTERVIEW_UPDATED", by: "recruiter", at: daysAgo(35), message: "Automation exercise completed" },
+      {
+        type: "ACCEPTED",
+        by: "recruiter",
+        at: daysAgo(39),
+        message: "Strong Playwright background — let's talk.",
+      },
+      {
+        type: "INTERVIEW_SCHEDULED",
+        by: "recruiter",
+        at: daysAgo(38),
+        message: "Automation exercise",
+      },
+      {
+        type: "INTERVIEW_UPDATED",
+        by: "recruiter",
+        at: daysAgo(35),
+        message: "Automation exercise completed",
+      },
       { type: "OFFERED", by: "recruiter", at: daysAgo(30) },
       { type: "COMMITTED", by: "candidate", at: daysAgo(29) },
-      { type: "NOT_JOINED", by: "recruiter", at: daysAgo(6), message: "Did not report on the joining day and stopped answering calls and email." },
-      { type: "GHOSTING_REPORTED", by: "recruiter", at: daysAgo(5), message: "No-show on joining day after committing on Readyhire." },
+      {
+        type: "NOT_JOINED",
+        by: "recruiter",
+        at: daysAgo(6),
+        message: "Did not report on the joining day and stopped answering calls and email.",
+      },
+      {
+        type: "GHOSTING_REPORTED",
+        by: "recruiter",
+        at: daysAgo(5),
+        message: "No-show on joining day after committing on Readyhire.",
+      },
     ],
   });
   await db.interview.create({
-    data: { applicationId: rahulQa.id, round: "Automation exercise", scheduledAt: istAt(-35, 14), mode: "IN_PERSON", location: "Northwind GCC, Financial District, Hyderabad", status: "COMPLETED", candidateConfirmed: true },
+    data: {
+      applicationId: rahulQa.id,
+      round: "Automation exercise",
+      scheduledAt: istAt(-35, 14),
+      mode: "IN_PERSON",
+      location: "Northwind GCC, Financial District, Hyderabad",
+      status: "COMPLETED",
+      candidateConfirmed: true,
+    },
   });
   await db.ghostingReport.create({
     data: {
@@ -807,7 +1082,8 @@ async function main() {
       candidateId: rahul.profile.id,
       reporterId: priya.user.id,
       stage: "DID_NOT_JOIN",
-      details: "Rahul committed to the role on Readyhire and accepted our offer, but did not report on the joining day. Three calls and two emails went unanswered.",
+      details:
+        "Rahul committed to the role on Readyhire and accepted our offer, but did not report on the joining day. Three calls and two emails went unanswered.",
       createdAt: daysAgo(5),
     },
   });
@@ -830,11 +1106,24 @@ async function main() {
     appliedAt: daysAgo(3),
     respondedAt: daysAgo(2),
     responseMessage: "Your Terraform + Kubernetes work fits well. I'll share interview slots shortly.",
-    steps: [{ type: "ACCEPTED", by: "recruiter", at: daysAgo(2), message: "Your Terraform + Kubernetes work fits well. I'll share interview slots shortly." }],
+    steps: [
+      {
+        type: "ACCEPTED",
+        by: "recruiter",
+        at: daysAgo(2),
+        message: "Your Terraform + Kubernetes work fits well. I'll share interview slots shortly.",
+      },
+    ],
   });
 
   // Pooja → Northwind data engineer: brand new.
-  await application({ jobId: dataEng.id, candidate: pooja, recruiterUserId: priya.user.id, status: "APPLIED", appliedAt: hoursAgo(6) });
+  await application({
+    jobId: dataEng.id,
+    candidate: pooja,
+    recruiterUserId: priya.user.id,
+    status: "APPLIED",
+    appliedAt: hoursAgo(6),
+  });
   // Pooja → Contoso product analyst: withdrawn before the job closed.
   await application({
     jobId: analyst.id,
@@ -846,8 +1135,18 @@ async function main() {
     responseMessage: "Thanks Pooja, let's schedule a case-study round.",
     withdrawnReason: "I've decided to focus on data engineering roles instead.",
     steps: [
-      { type: "ACCEPTED", by: "recruiter", at: daysAgo(29), message: "Thanks Pooja, let's schedule a case-study round." },
-      { type: "WITHDRAWN", by: "candidate", at: daysAgo(27), message: "I've decided to focus on data engineering roles instead." },
+      {
+        type: "ACCEPTED",
+        by: "recruiter",
+        at: daysAgo(29),
+        message: "Thanks Pooja, let's schedule a case-study round.",
+      },
+      {
+        type: "WITHDRAWN",
+        by: "candidate",
+        at: daysAgo(27),
+        message: "I've decided to focus on data engineering roles instead.",
+      },
     ],
   });
 

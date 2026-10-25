@@ -33,11 +33,19 @@ export async function issueAuthToken(userId: string, purpose: AuthTokenPurpose) 
 export async function consumeAuthToken(token: string, purpose: AuthTokenPurpose) {
   if (!token || token.length > 200) return null;
   const { count } = await db.authToken.updateMany({
-    where: { tokenHash: hash(token), purpose, usedAt: null, expiresAt: { gt: new Date() } },
+    where: {
+      tokenHash: hash(token),
+      purpose,
+      usedAt: null,
+      expiresAt: { gt: new Date() },
+    },
     data: { usedAt: new Date() },
   });
   if (count === 0) return null;
-  const row = await db.authToken.findUnique({ where: { tokenHash: hash(token) }, select: { userId: true } });
+  const row = await db.authToken.findUnique({
+    where: { tokenHash: hash(token) },
+    select: { userId: true },
+  });
   return row?.userId ?? null;
 }
 
@@ -45,7 +53,12 @@ export async function consumeAuthToken(token: string, purpose: AuthTokenPurpose)
 export async function peekAuthToken(token: string, purpose: AuthTokenPurpose) {
   if (!token || token.length > 200) return false;
   const row = await db.authToken.findFirst({
-    where: { tokenHash: hash(token), purpose, usedAt: null, expiresAt: { gt: new Date() } },
+    where: {
+      tokenHash: hash(token),
+      purpose,
+      usedAt: null,
+      expiresAt: { gt: new Date() },
+    },
     select: { id: true },
   });
   return !!row;

@@ -46,7 +46,11 @@ function securityHeaders(nonce: string) {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "SAMEORIGIN",
     "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
-    ...(https ? { "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload" } : {}),
+    ...(https
+      ? {
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        }
+      : {}),
   };
 }
 

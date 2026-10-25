@@ -26,12 +26,24 @@ export function createScriptStore() {
       region: process.env.S3_REGION ?? "ap-south-1",
       endpoint: process.env.S3_ENDPOINT || undefined,
       forcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true",
-      credentials: { accessKeyId: process.env.S3_ACCESS_KEY_ID!, secretAccessKey: process.env.S3_SECRET_ACCESS_KEY! },
+      credentials: {
+        accessKeyId: process.env.S3_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.S3_SECRET_ACCESS_KEY!,
+      },
     });
     const Bucket = process.env.S3_BUCKET!;
     return {
       put: (key: string, body: Uint8Array, contentType: string) =>
-        client.send(new PutObjectCommand({ Bucket, Key: key, Body: body, ContentType: contentType })).then(() => undefined),
+        client
+          .send(
+            new PutObjectCommand({
+              Bucket,
+              Key: key,
+              Body: body,
+              ContentType: contentType,
+            }),
+          )
+          .then(() => undefined),
       remove: (key: string) => client.send(new DeleteObjectCommand({ Bucket, Key: key })).then(() => undefined),
     };
   }

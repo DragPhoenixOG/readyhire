@@ -14,14 +14,19 @@ export default async function AdminRecruitersPage() {
   await requireRole("ADMIN");
   const recruiters = await db.recruiterProfile.findMany({
     include: {
-      user: { select: { name: true, email: true, status: true, flagged: true } },
+      user: {
+        select: { name: true, email: true, status: true, flagged: true },
+      },
       company: true,
       _count: { select: { jobs: true } },
     },
     orderBy: { createdAt: "desc" },
   });
   // The approval queue comes first.
-  const sorted = [...recruiters.filter((r) => r.approvalStatus === "PENDING"), ...recruiters.filter((r) => r.approvalStatus !== "PENDING")];
+  const sorted = [
+    ...recruiters.filter((r) => r.approvalStatus === "PENDING"),
+    ...recruiters.filter((r) => r.approvalStatus !== "PENDING"),
+  ];
 
   return (
     <>
@@ -51,7 +56,9 @@ export default async function AdminRecruitersPage() {
                       {r.company.website && ` · ${r.company.website}`}
                     </p>
                   </Td>
-                  <Td>{domainIssue ? <Badge tone="red">{domainIssue}</Badge> : <Badge tone="green">Company domain</Badge>}</Td>
+                  <Td>
+                    {domainIssue ? <Badge tone="red">{domainIssue}</Badge> : <Badge tone="green">Company domain</Badge>}
+                  </Td>
                   <Td className="whitespace-nowrap">{formatDate(r.createdAt)}</Td>
                   <Td>{r._count.jobs}</Td>
                   <Td>
@@ -59,19 +66,43 @@ export default async function AdminRecruitersPage() {
                     {r.reviewNote && <p className="mt-1 max-w-48 text-xs text-slate-500">{r.reviewNote}</p>}
                   </Td>
                   <Td className="min-w-64">
-                    <ActionForm action={decideRecruiter} submitLabel="Save" size="sm" variant={r.approvalStatus === "PENDING" ? "primary" : "secondary"} className="space-y-2">
+                    <ActionForm
+                      action={decideRecruiter}
+                      submitLabel="Save"
+                      size="sm"
+                      variant={r.approvalStatus === "PENDING" ? "primary" : "secondary"}
+                      className="space-y-2"
+                    >
                       <input type="hidden" name="recruiterId" value={r.id} />
                       <div className="flex gap-3 text-sm">
                         <label className="flex items-center gap-1.5">
-                          <input type="radio" name="decision" value="APPROVED" required defaultChecked={r.approvalStatus === "APPROVED"} className="accent-brand-700" />
+                          <input
+                            type="radio"
+                            name="decision"
+                            value="APPROVED"
+                            required
+                            defaultChecked={r.approvalStatus === "APPROVED"}
+                            className="accent-brand-700"
+                          />
                           Approve
                         </label>
                         <label className="flex items-center gap-1.5">
-                          <input type="radio" name="decision" value="REJECTED" defaultChecked={r.approvalStatus === "REJECTED"} className="accent-rose-600" />
+                          <input
+                            type="radio"
+                            name="decision"
+                            value="REJECTED"
+                            defaultChecked={r.approvalStatus === "REJECTED"}
+                            className="accent-rose-600"
+                          />
                           Reject
                         </label>
                       </div>
-                      <input name="note" placeholder="Note (required to reject)" aria-label="Decision note" className={inputClass} />
+                      <input
+                        name="note"
+                        placeholder="Note (required to reject)"
+                        aria-label="Decision note"
+                        className={inputClass}
+                      />
                     </ActionForm>
                   </Td>
                 </tr>

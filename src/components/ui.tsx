@@ -96,7 +96,7 @@ export function Badge({ tone = "neutral", children }: { tone?: Tone; children: R
   return (
     <span
       className={cx(
-        "inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset",
+        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ring-1 ring-inset",
         toneClass[tone],
       )}
     >
@@ -172,7 +172,15 @@ export function StatCard({
   );
 }
 
-export function EmptyState({ title, description, action }: { title: string; description?: ReactNode; action?: ReactNode }) {
+export function EmptyState({
+  title,
+  description,
+  action,
+}: {
+  title: string;
+  description?: ReactNode;
+  action?: ReactNode;
+}) {
   return (
     <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center">
       <p className="font-medium text-slate-800">{title}</p>
@@ -202,7 +210,12 @@ export function Notice({
     violet: "border-violet-200 bg-violet-50 text-violet-900",
   };
   return (
-    <div className={cx("flex flex-wrap items-start justify-between gap-3 rounded-xl border px-4 py-3 text-sm", styles[tone])}>
+    <div
+      className={cx(
+        "flex flex-wrap items-start justify-between gap-3 rounded-xl border px-4 py-3 text-sm",
+        styles[tone],
+      )}
+    >
       <div className="min-w-0 space-y-0.5">
         {title && <p className="font-semibold">{title}</p>}
         {children && <div className="opacity-90">{children}</div>}
@@ -217,7 +230,7 @@ export function DescriptionList({ items }: { items: { label: string; value: Reac
     <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
       {items.map((item) => (
         <div key={item.label}>
-          <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">{item.label}</dt>
+          <dt className="text-xs font-medium tracking-wide text-slate-500 uppercase">{item.label}</dt>
           <dd className="mt-0.5 text-sm text-slate-900">{item.value}</dd>
         </div>
       ))}
@@ -235,7 +248,7 @@ export function Table({ head, children }: { head: ReactNode[]; children: ReactNo
               <th
                 key={i}
                 scope="col"
-                className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500"
+                className="px-3 py-2 text-left text-xs font-medium tracking-wide whitespace-nowrap text-slate-500 uppercase"
               >
                 {h}
               </th>

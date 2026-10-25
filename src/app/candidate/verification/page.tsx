@@ -1,10 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  reopenVerification,
-  saveNoticeDetails,
-  submitForVerification,
-} from "@/actions/candidate";
+import { reopenVerification, saveNoticeDetails, submitForVerification } from "@/actions/candidate";
 import { ActionForm } from "@/components/action-form";
 import { DocumentUploader } from "@/components/document-uploader";
 import { DocumentStatusBadge, VerificationBadge } from "@/components/status";
@@ -37,8 +33,9 @@ export default async function VerificationPage() {
         {status === "VERIFIED" && (
           <Notice tone="green" title="You're verified and visible to recruiters">
             Verified {formatDate(profile.verifiedAt)}
-            {profile.verificationMethod && ` via ${VERIFICATION_METHOD_LABEL[profile.verificationMethod].toLowerCase()}`}.
-            Recruiters see your notice period, last working day, active offers and commitment status.
+            {profile.verificationMethod &&
+              ` via ${VERIFICATION_METHOD_LABEL[profile.verificationMethod].toLowerCase()}`}
+            . Recruiters see your notice period, last working day, active offers and commitment status.
           </Notice>
         )}
         {status === "PENDING" && (
@@ -94,10 +91,22 @@ export default async function VerificationPage() {
           ) : (
             <DescriptionList
               items={[
-                { label: "Notice period", value: `${profile.noticePeriodDays} days` },
-                { label: "Resignation date", value: formatDate(profile.resignationDate) },
-                { label: "Last working day", value: formatDate(profile.lastWorkingDay) },
-                { label: "Current company", value: profile.currentCompany ?? "—" },
+                {
+                  label: "Notice period",
+                  value: `${profile.noticePeriodDays} days`,
+                },
+                {
+                  label: "Resignation date",
+                  value: formatDate(profile.resignationDate),
+                },
+                {
+                  label: "Last working day",
+                  value: formatDate(profile.lastWorkingDay),
+                },
+                {
+                  label: "Current company",
+                  value: profile.currentCompany ?? "—",
+                },
               ]}
             />
           )}
@@ -112,7 +121,10 @@ export default async function VerificationPage() {
           )}
         </Card>
 
-        <Card title="2. Documents" description="PDF, PNG, JPG or WebP, up to 5 MB each. Only the Readyhire team can view them.">
+        <Card
+          title="2. Documents"
+          description="PDF, PNG, JPG or WebP, up to 5 MB each. Only the Readyhire team can view them."
+        >
           <ul className="divide-y divide-slate-100">
             {REQUIRED_DOCUMENTS.map((type) => {
               const doc = documents.find((d) => d.type === type);
@@ -121,12 +133,20 @@ export default async function VerificationPage() {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="font-medium text-slate-900">{DOCUMENT_INFO[type].label}</p>
-                      {doc ? <DocumentStatusBadge status={doc.status} /> : <span className="text-xs text-slate-500">Not uploaded</span>}
+                      {doc ? (
+                        <DocumentStatusBadge status={doc.status} />
+                      ) : (
+                        <span className="text-xs text-slate-500">Not uploaded</span>
+                      )}
                     </div>
                     <p className="mt-0.5 text-sm text-slate-500">{DOCUMENT_INFO[type].help}</p>
                     {doc && (
                       <p className="mt-2 text-sm">
-                        <a href={`/api/documents/${doc.id}`} target="_blank" className="font-medium text-brand-700 hover:underline">
+                        <a
+                          href={`/api/documents/${doc.id}`}
+                          target="_blank"
+                          className="font-medium text-brand-700 hover:underline"
+                        >
                           {doc.fileName}
                         </a>{" "}
                         <span className="text-slate-500">· uploaded {formatDate(doc.uploadedAt)}</span>
@@ -153,7 +173,10 @@ export default async function VerificationPage() {
         </Card>
 
         {editable ? (
-          <Card title="3. Submit for verification" description="You can't change notice details or documents while the review is in progress.">
+          <Card
+            title="3. Submit for verification"
+            description="You can't change notice details or documents while the review is in progress."
+          >
             {/* Re-mount when the inputs change so an earlier "missing X" error doesn't linger. */}
             <ActionForm
               key={`${profile.updatedAt.getTime()}-${documents.map((d) => d.id).join()}`}

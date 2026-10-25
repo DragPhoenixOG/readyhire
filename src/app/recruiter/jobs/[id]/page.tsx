@@ -34,7 +34,9 @@ export default async function RecruiterJobPage({ params }: PageProps<"/recruiter
         back={{ href: "/recruiter/jobs", label: "Jobs" }}
         actions={
           <>
-            <Badge tone={job.status === "OPEN" ? "green" : "neutral"}>{job.status === "OPEN" ? "Open" : "Closed"}</Badge>
+            <Badge tone={job.status === "OPEN" ? "green" : "neutral"}>
+              {job.status === "OPEN" ? "Open" : "Closed"}
+            </Badge>
             <ActionForm
               action={setJobStatus}
               submitLabel={job.status === "OPEN" ? "Close job" : "Reopen job"}
@@ -63,7 +65,7 @@ export default async function RecruiterJobPage({ params }: PageProps<"/recruiter
           <div className="mt-3">
             <Chips items={splitList(job.skills)} />
           </div>
-          <p className="mt-4 whitespace-pre-line text-sm leading-6 text-slate-700">{job.description}</p>
+          <p className="mt-4 text-sm leading-6 whitespace-pre-line text-slate-700">{job.description}</p>
         </Card>
       </div>
     </>

@@ -6,7 +6,10 @@ import type { EmailMessage } from "@/lib/email/transport";
 type Template = Omit<EmailMessage, "to">;
 
 function escape(value: string) {
-  return value.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+  return value.replace(
+    /[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
+  );
 }
 
 export function absoluteUrl(path: string) {
@@ -21,7 +24,13 @@ function render(subject: string, greeting: string, blocks: Block[]): Template {
     greeting,
     "",
     ...blocks.map((b) =>
-      "text" in b ? b.text : "quote" in b ? `> ${b.quote}` : "button" in b ? `${b.button.label}: ${absoluteUrl(b.button.path)}` : b.muted,
+      "text" in b
+        ? b.text
+        : "quote" in b
+          ? `> ${b.quote}`
+          : "button" in b
+            ? `${b.button.label}: ${absoluteUrl(b.button.path)}`
+            : b.muted,
     ),
     "",
     "— Readyhire · Hire with confirmed availability",
@@ -54,21 +63,41 @@ const hi = (name: string) => `Hi ${name.split(" ")[0]},`;
 export const emails = {
   verifyEmail: (name: string, token: string) =>
     render("Confirm your email for Readyhire", hi(name), [
-      { text: "Confirm your email address to start using Readyhire. The link expires in 24 hours." },
-      { button: { label: "Confirm email", path: `/verify-email/confirm?token=${encodeURIComponent(token)}` } },
-      { muted: "If you didn't create a Readyhire account, you can ignore this email." },
+      {
+        text: "Confirm your email address to start using Readyhire. The link expires in 24 hours.",
+      },
+      {
+        button: {
+          label: "Confirm email",
+          path: `/verify-email/confirm?token=${encodeURIComponent(token)}`,
+        },
+      },
+      {
+        muted: "If you didn't create a Readyhire account, you can ignore this email.",
+      },
     ]),
 
   passwordReset: (name: string, token: string) =>
     render("Reset your Readyhire password", hi(name), [
-      { text: "Someone asked to reset the password for your Readyhire account. The link expires in 1 hour." },
-      { button: { label: "Choose a new password", path: `/reset-password?token=${encodeURIComponent(token)}` } },
-      { muted: "If this wasn't you, ignore this email — your password stays the same." },
+      {
+        text: "Someone asked to reset the password for your Readyhire account. The link expires in 1 hour.",
+      },
+      {
+        button: {
+          label: "Choose a new password",
+          path: `/reset-password?token=${encodeURIComponent(token)}`,
+        },
+      },
+      {
+        muted: "If this wasn't you, ignore this email — your password stays the same.",
+      },
     ]),
 
   verificationApproved: (name: string) =>
     render("You're verified on Readyhire", hi(name), [
-      { text: "Your notice period, resignation and offer letter have been verified. Recruiters can now see your profile and you can apply to jobs." },
+      {
+        text: "Your notice period, resignation and offer letter have been verified. Recruiters can now see your profile and you can apply to jobs.",
+      },
       { button: { label: "Browse jobs", path: "/candidate/jobs" } },
     ]),
 
@@ -76,7 +105,12 @@ export const emails = {
     render("Your Readyhire verification needs changes", hi(name), [
       { text: "We couldn't verify your documents yet. Here's what to fix:" },
       { quote: reason },
-      { button: { label: "Update and resubmit", path: "/candidate/verification" } },
+      {
+        button: {
+          label: "Update and resubmit",
+          path: "/candidate/verification",
+        },
+      },
     ]),
 
   recruiterDecision: (name: string, approved: boolean, note: string | null) =>
@@ -91,70 +125,153 @@ export const emails = {
           { muted: "Reply to this email if you think this is a mistake." },
         ]),
 
-  applicationReceived: (recruiterName: string, candidateName: string, jobTitle: string, dueAt: Date, applicationId: string) =>
+  applicationReceived: (
+    recruiterName: string,
+    candidateName: string,
+    jobTitle: string,
+    dueAt: Date,
+    applicationId: string,
+  ) =>
     render(`New application: ${candidateName} for ${jobTitle}`, hi(recruiterName), [
-      { text: `${candidateName} (verified notice period) applied for ${jobTitle}.` },
-      { text: `Accept with a message or reject with a reason by ${formatDateTime(dueAt)}.` },
-      { button: { label: "Review application", path: `/recruiter/applications/${applicationId}` } },
+      {
+        text: `${candidateName} (verified notice period) applied for ${jobTitle}.`,
+      },
+      {
+        text: `Accept with a message or reject with a reason by ${formatDateTime(dueAt)}.`,
+      },
+      {
+        button: {
+          label: "Review application",
+          path: `/recruiter/applications/${applicationId}`,
+        },
+      },
     ]),
 
   applicationAccepted: (name: string, jobTitle: string, company: string, message: string, applicationId: string) =>
     render(`${company} accepted your application`, hi(name), [
-      { text: `Good news — ${company} accepted your application for ${jobTitle}.` },
+      {
+        text: `Good news — ${company} accepted your application for ${jobTitle}.`,
+      },
       { quote: message },
-      { button: { label: "View application", path: `/candidate/applications/${applicationId}` } },
+      {
+        button: {
+          label: "View application",
+          path: `/candidate/applications/${applicationId}`,
+        },
+      },
     ]),
 
-  applicationRejected: (name: string, jobTitle: string, company: string, category: string, reason: string, applicationId: string) =>
+  applicationRejected: (
+    name: string,
+    jobTitle: string,
+    company: string,
+    category: string,
+    reason: string,
+    applicationId: string,
+  ) =>
     render(`Update on your ${jobTitle} application`, hi(name), [
-      { text: `${company} isn't moving forward with your application for ${jobTitle}. Their reason:` },
+      {
+        text: `${company} isn't moving forward with your application for ${jobTitle}. Their reason:`,
+      },
       { quote: `${category}\n${reason}` },
-      { button: { label: "View application", path: `/candidate/applications/${applicationId}` } },
+      {
+        button: {
+          label: "View application",
+          path: `/candidate/applications/${applicationId}`,
+        },
+      },
     ]),
 
   interviewScheduled: (
     name: string,
     jobTitle: string,
     company: string,
-    interview: { round: string; scheduledAt: Date; mode: string; location: string | null },
+    interview: {
+      round: string;
+      scheduledAt: Date;
+      mode: string;
+      location: string | null;
+    },
     applicationId: string,
   ) =>
     render(`Interview scheduled: ${interview.round} with ${company}`, hi(name), [
       { text: `${company} scheduled "${interview.round}" for ${jobTitle}.` },
-      { quote: [formatDateTime(interview.scheduledAt), interview.mode, interview.location].filter(Boolean).join("\n") },
+      {
+        quote: [formatDateTime(interview.scheduledAt), interview.mode, interview.location].filter(Boolean).join("\n"),
+      },
       { text: "Please confirm that you'll attend." },
-      { button: { label: "Confirm attendance", path: `/candidate/applications/${applicationId}` } },
+      {
+        button: {
+          label: "Confirm attendance",
+          path: `/candidate/applications/${applicationId}`,
+        },
+      },
     ]),
 
-  offerExtended: (name: string, jobTitle: string, company: string, ctc: number | null, joining: Date | null, applicationId: string) =>
+  offerExtended: (
+    name: string,
+    jobTitle: string,
+    company: string,
+    ctc: number | null,
+    joining: Date | null,
+    applicationId: string,
+  ) =>
     render(`Offer from ${company}`, hi(name), [
-      { text: `${company} extended an offer for ${jobTitle}${ctc ? ` at ${formatLpa(ctc)}` : ""}, joining ${formatDate(joining)}.` },
-      { text: "If you intend to join, commit to the role on Readyhire so the team can plan for you." },
-      { button: { label: "View offer", path: `/candidate/applications/${applicationId}` } },
+      {
+        text: `${company} extended an offer for ${jobTitle}${ctc ? ` at ${formatLpa(ctc)}` : ""}, joining ${formatDate(joining)}.`,
+      },
+      {
+        text: "If you intend to join, commit to the role on Readyhire so the team can plan for you.",
+      },
+      {
+        button: {
+          label: "View offer",
+          path: `/candidate/applications/${applicationId}`,
+        },
+      },
     ]),
 
   candidateUpdate: (recruiterName: string, headline: string, detail: string | null, applicationId: string) =>
     render(headline, hi(recruiterName), [
       { text: headline + "." },
       ...(detail ? [{ quote: detail }] : []),
-      { button: { label: "View application", path: `/recruiter/applications/${applicationId}` } },
+      {
+        button: {
+          label: "View application",
+          path: `/recruiter/applications/${applicationId}`,
+        },
+      },
     ]),
 
   responseReminder: (recruiterName: string, dueSoon: string[], overdue: string[]) =>
     render(
-      overdue.length ? `${overdue.length} application(s) overdue for a response` : `${dueSoon.length} application(s) due for a response`,
+      overdue.length
+        ? `${overdue.length} application(s) overdue for a response`
+        : `${dueSoon.length} application(s) due for a response`,
       hi(recruiterName),
       [
         ...(overdue.length
           ? [
-              { text: "These applications are past the 72-hour response deadline. Posting new jobs is paused until you reply:" },
+              {
+                text: "These applications are past the 72-hour response deadline. Posting new jobs is paused until you reply:",
+              },
               { quote: overdue.join("\n") },
             ]
           : []),
         ...(dueSoon.length
-          ? [{ text: "These applications are due for a response within 24 hours:" }, { quote: dueSoon.join("\n") }]
+          ? [
+              {
+                text: "These applications are due for a response within 24 hours:",
+              },
+              { quote: dueSoon.join("\n") },
+            ]
           : []),
-        { button: { label: "Respond now", path: "/recruiter/applications?tab=response" } },
+        {
+          button: {
+            label: "Respond now",
+            path: "/recruiter/applications?tab=response",
+          },
+        },
       ],
     ),
 };

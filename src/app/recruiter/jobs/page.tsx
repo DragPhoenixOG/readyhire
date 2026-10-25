@@ -27,7 +27,10 @@ export default async function RecruiterJobsPage() {
         }
       />
       {jobs.length === 0 ? (
-        <EmptyState title="No jobs yet" description="Post a job to start receiving applications from verified candidates." />
+        <EmptyState
+          title="No jobs yet"
+          description="Post a job to start receiving applications from verified candidates."
+        />
       ) : (
         <Card bodyClassName="px-2 py-2">
           <Table head={["Job", "Status", "Applications", "Awaiting response", "In progress", "Joined", "Posted"]}>
@@ -43,7 +46,9 @@ export default async function RecruiterJobsPage() {
                     <p className="text-xs text-slate-500">{job.location}</p>
                   </Td>
                   <Td>
-                    <Badge tone={job.status === "OPEN" ? "green" : "neutral"}>{job.status === "OPEN" ? "Open" : "Closed"}</Badge>
+                    <Badge tone={job.status === "OPEN" ? "green" : "neutral"}>
+                      {job.status === "OPEN" ? "Open" : "Closed"}
+                    </Badge>
                   </Td>
                   <Td>{job.applications.length}</Td>
                   <Td>{awaiting ? <Badge tone="amber">{awaiting}</Badge> : "0"}</Td>

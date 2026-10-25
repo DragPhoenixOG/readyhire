@@ -13,5 +13,7 @@ export function audit(
   summary: string,
   tx: Prisma.TransactionClient = db,
 ) {
-  return tx.auditLog.create({ data: { actorId, action, entityType, entityId, summary } });
+  return tx.auditLog.create({
+    data: { actorId, action, entityType, entityId, summary },
+  });
 }

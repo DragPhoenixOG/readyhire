@@ -11,9 +11,17 @@ export const metadata: Metadata = { title: "Applications" };
 
 const TABS: { key: string; label: string; statuses?: ApplicationStatus[] }[] = [
   { key: "response", label: "Needs response", statuses: ["APPLIED"] },
-  { key: "progress", label: "In progress", statuses: ["ACCEPTED", "INTERVIEWING"] },
+  {
+    key: "progress",
+    label: "In progress",
+    statuses: ["ACCEPTED", "INTERVIEWING"],
+  },
   { key: "offers", label: "Offers", statuses: ["OFFERED"] },
-  { key: "closed", label: "Closed", statuses: ["JOINED", "NOT_JOINED", "REJECTED", "WITHDRAWN"] },
+  {
+    key: "closed",
+    label: "Closed",
+    statuses: ["JOINED", "NOT_JOINED", "REJECTED", "WITHDRAWN"],
+  },
   { key: "all", label: "All" },
 ];
 
@@ -25,7 +33,10 @@ export default async function RecruiterApplicationsPage({ searchParams }: PagePr
 
   const [applications, counts] = await Promise.all([
     db.application.findMany({
-      where: { ...mine, ...(tab.statuses ? { status: { in: tab.statuses } } : {}) },
+      where: {
+        ...mine,
+        ...(tab.statuses ? { status: { in: tab.statuses } } : {}),
+      },
       include: { job: true, candidate: { include: candidateSummaryInclude } },
       // Oldest first when responding, so the most overdue are on top.
       orderBy: tab.key === "response" ? { createdAt: "asc" } : { updatedAt: "desc" },
@@ -37,7 +48,10 @@ export default async function RecruiterApplicationsPage({ searchParams }: PagePr
 
   return (
     <>
-      <PageHeader title="Applications" description="Every application must be accepted or rejected with a reason within 72 hours." />
+      <PageHeader
+        title="Applications"
+        description="Every application must be accepted or rejected with a reason within 72 hours."
+      />
       <nav className="mb-4 flex flex-wrap gap-2" aria-label="Application status">
         {TABS.map((t) => (
           <Link
@@ -46,7 +60,9 @@ export default async function RecruiterApplicationsPage({ searchParams }: PagePr
             aria-current={t.key === tab.key ? "page" : undefined}
             className={cx(
               "rounded-full px-3 py-1.5 text-sm font-medium ring-1 ring-inset",
-              t.key === tab.key ? "bg-brand-700 text-white ring-brand-700" : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50",
+              t.key === tab.key
+                ? "bg-brand-700 text-white ring-brand-700"
+                : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50",
             )}
           >
             {t.label} <span className="opacity-75">{countFor(t)}</span>

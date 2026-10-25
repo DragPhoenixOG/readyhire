@@ -1,0 +1,10 @@
+node_modules
+.next
+src/generated
+prisma/migrations
+storage
+storage-e2e
+.e2e
+test-results
+playwright-report
+package-lock.json

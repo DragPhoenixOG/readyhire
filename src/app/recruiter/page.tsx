@@ -18,8 +18,18 @@ export default async function RecruiterDashboard() {
   if (recruiter.approvalStatus !== "APPROVED") {
     return (
       <>
-        <PageHeader title={`Welcome, ${user.name.split(" ")[0]}`} actions={<ApprovalBadge status={recruiter.approvalStatus} />} />
-        <Card className="max-w-2xl" title={recruiter.approvalStatus === "PENDING" ? "Your account is awaiting approval" : "Your account was not approved"}>
+        <PageHeader
+          title={`Welcome, ${user.name.split(" ")[0]}`}
+          actions={<ApprovalBadge status={recruiter.approvalStatus} />}
+        />
+        <Card
+          className="max-w-2xl"
+          title={
+            recruiter.approvalStatus === "PENDING"
+              ? "Your account is awaiting approval"
+              : "Your account was not approved"
+          }
+        >
           <p className="text-sm text-slate-600">
             {recruiter.approvalStatus === "PENDING"
               ? "The Readyhire team checks every recruiter's company domain before they can post jobs or see candidates. This usually takes less than a business day."
@@ -29,7 +39,10 @@ export default async function RecruiterDashboard() {
             <DescriptionList
               items={[
                 { label: "Company", value: recruiter.company.name },
-                { label: "Verified email domain", value: recruiter.company.domain },
+                {
+                  label: "Verified email domain",
+                  value: recruiter.company.domain,
+                },
                 { label: "Website", value: recruiter.company.website ?? "—" },
                 { label: "Signed up", value: formatDate(recruiter.createdAt) },
               ]}
@@ -49,8 +62,16 @@ export default async function RecruiterDashboard() {
       orderBy: { createdAt: "asc" },
     }),
     db.interview.findMany({
-      where: { status: "SCHEDULED", scheduledAt: { gte: now }, application: mine },
-      include: { application: { include: { job: true, candidate: { include: { user: true } } } } },
+      where: {
+        status: "SCHEDULED",
+        scheduledAt: { gte: now },
+        application: mine,
+      },
+      include: {
+        application: {
+          include: { job: true, candidate: { include: { user: true } } },
+        },
+      },
       orderBy: { scheduledAt: "asc" },
       take: 6,
     }),
@@ -59,7 +80,10 @@ export default async function RecruiterDashboard() {
       include: { job: true, candidate: { include: candidateSummaryInclude } },
       orderBy: { offerJoiningDate: "asc" },
     }),
-    db.application.findMany({ where: mine, select: { status: true, createdAt: true, respondedAt: true } }),
+    db.application.findMany({
+      where: mine,
+      select: { status: true, createdAt: true, respondedAt: true },
+    }),
   ]);
 
   const stats = responseStats(all, now);
@@ -91,7 +115,12 @@ export default async function RecruiterDashboard() {
           value={percent(stats.responded, stats.expected)}
           hint={stats.avgHours != null ? `Avg. first response ${formatHours(stats.avgHours)}` : "No responses yet"}
         />
-        <StatCard label="Offers out" value={offers.length} tone={offers.length ? "blue" : "neutral"} href="/recruiter/applications?tab=offers" />
+        <StatCard
+          label="Offers out"
+          value={offers.length}
+          tone={offers.length ? "blue" : "neutral"}
+          href="/recruiter/applications?tab=offers"
+        />
         <StatCard
           label="Joined / not joined"
           value={`${joined} / ${notJoined}`}
@@ -113,7 +142,10 @@ export default async function RecruiterDashboard() {
                 return (
                   <li key={a.id} className="flex items-start justify-between gap-3 py-2.5">
                     <div className="min-w-0 text-sm">
-                      <Link href={`/recruiter/applications/${a.id}`} className="font-medium text-slate-900 hover:underline">
+                      <Link
+                        href={`/recruiter/applications/${a.id}`}
+                        className="font-medium text-slate-900 hover:underline"
+                      >
                         {a.candidate.user.name}
                       </Link>
                       <p className="text-slate-600">{a.job.title}</p>
@@ -123,7 +155,9 @@ export default async function RecruiterDashboard() {
                       </div>
                     </div>
                     <Badge tone={late ? "red" : "amber"}>
-                      {late ? `Overdue by ${formatHours(hoursSince(due, now))}` : `Due in ${formatHours(-hoursSince(due, now))}`}
+                      {late
+                        ? `Overdue by ${formatHours(hoursSince(due, now))}`
+                        : `Due in ${formatHours(-hoursSince(due, now))}`}
                     </Badge>
                   </li>
                 );
@@ -140,7 +174,10 @@ export default async function RecruiterDashboard() {
               {interviews.map((i) => (
                 <li key={i.id} className="flex items-start justify-between gap-3 py-2.5 text-sm">
                   <div className="min-w-0">
-                    <Link href={`/recruiter/applications/${i.applicationId}`} className="font-medium text-slate-900 hover:underline">
+                    <Link
+                      href={`/recruiter/applications/${i.applicationId}`}
+                      className="font-medium text-slate-900 hover:underline"
+                    >
                       {i.application.candidate.user.name}
                     </Link>
                     <p className="text-slate-600">
@@ -150,7 +187,9 @@ export default async function RecruiterDashboard() {
                       {formatDateTime(i.scheduledAt)} · {INTERVIEW_MODE_LABEL[i.mode]}
                     </p>
                   </div>
-                  <Badge tone={i.candidateConfirmed ? "green" : "neutral"}>{i.candidateConfirmed ? "Confirmed" : "Unconfirmed"}</Badge>
+                  <Badge tone={i.candidateConfirmed ? "green" : "neutral"}>
+                    {i.candidateConfirmed ? "Confirmed" : "Unconfirmed"}
+                  </Badge>
                 </li>
               ))}
             </ul>
@@ -158,7 +197,11 @@ export default async function RecruiterDashboard() {
         </Card>
       </div>
 
-      <Card className="mt-6" title="Offers awaiting joining" description="Mark each one joined or not joined once the joining date passes.">
+      <Card
+        className="mt-6"
+        title="Offers awaiting joining"
+        description="Mark each one joined or not joined once the joining date passes."
+      >
         {offers.length === 0 ? (
           <EmptyState title="No open offers" />
         ) : (
@@ -169,7 +212,10 @@ export default async function RecruiterDashboard() {
               return (
                 <li key={a.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5 text-sm">
                   <div className="min-w-0">
-                    <Link href={`/recruiter/applications/${a.id}`} className="font-medium text-slate-900 hover:underline">
+                    <Link
+                      href={`/recruiter/applications/${a.id}`}
+                      className="font-medium text-slate-900 hover:underline"
+                    >
                       {a.candidate.user.name}
                     </Link>{" "}
                     <span className="text-slate-600">· {a.job.title}</span>

@@ -26,7 +26,9 @@ export default async function AdminDashboard() {
     db.candidateProfile.groupBy({ by: ["verificationStatus"], _count: true }),
     db.recruiterProfile.count({ where: { approvalStatus: "PENDING" } }),
     db.job.count({ where: { status: "OPEN" } }),
-    db.application.findMany({ select: { status: true, createdAt: true, respondedAt: true } }),
+    db.application.findMany({
+      select: { status: true, createdAt: true, respondedAt: true },
+    }),
     db.ghostingReport.count({ where: { status: "OPEN" } }),
     db.user.count({ where: { status: "RESTRICTED" } }),
     db.user.count({ where: { flagged: true } }),
@@ -41,7 +43,13 @@ export default async function AdminDashboard() {
       include: {
         user: { select: { name: true, flagged: true } },
         company: { select: { name: true } },
-        jobs: { select: { applications: { select: { status: true, createdAt: true, respondedAt: true } } } },
+        jobs: {
+          select: {
+            applications: {
+              select: { status: true, createdAt: true, respondedAt: true },
+            },
+          },
+        },
       },
     }),
   ]);
@@ -69,7 +77,10 @@ export default async function AdminDashboard() {
 
   return (
     <>
-      <PageHeader title="Admin dashboard" description="Verification queue, response discipline and joining outcomes across Readyhire." />
+      <PageHeader
+        title="Admin dashboard"
+        description="Verification queue, response discipline and joining outcomes across Readyhire."
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
@@ -107,7 +118,12 @@ export default async function AdminDashboard() {
           hint={`${joined} joined · ${notJoined} did not join`}
         />
         <StatCard label="Applications" value={applications.length} href="/admin/applications" />
-        <StatCard label="Open ghosting reports" value={openReports} tone={openReports ? "amber" : "neutral"} href="/admin/reports" />
+        <StatCard
+          label="Open ghosting reports"
+          value={openReports}
+          tone={openReports ? "amber" : "neutral"}
+          href="/admin/reports"
+        />
         <StatCard label="Flagged / restricted users" value={`${flagged} / ${restricted}`} href="/admin/users" />
       </div>
 
@@ -127,14 +143,20 @@ export default async function AdminDashboard() {
                       {c.city ?? "—"} · submitted {c.submittedAt ? timeAgo(c.submittedAt) : "—"}
                     </p>
                   </div>
-                  {(c.city === "Hyderabad" || c.city === "Bengaluru") && <Badge tone="violet">In-person eligible</Badge>}
+                  {(c.city === "Hyderabad" || c.city === "Bengaluru") && (
+                    <Badge tone="violet">In-person eligible</Badge>
+                  )}
                 </li>
               ))}
             </ul>
           )}
         </Card>
 
-        <Card title="Recruiter response discipline" description={`Updated ${formatDateTime(now)}`} bodyClassName="px-2 py-2">
+        <Card
+          title="Recruiter response discipline"
+          description={`Updated ${formatDateTime(now)}`}
+          bodyClassName="px-2 py-2"
+        >
           <Table head={["Recruiter", "Applications", "Response rate", "Avg. response", "Overdue", "Joined / not"]}>
             {recruiterRows.map((r) => (
               <tr key={r.id}>

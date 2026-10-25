@@ -40,5 +40,10 @@ export function matchesSignature(contentType: string, head: Uint8Array) {
 
 export function cleanFileName(name: string) {
   const base = name.split(/[\\/]/).pop() ?? "";
-  return base.replace(/[\u0000-\u001f]/g, "").trim().slice(0, 200) || "document";
+  return (
+    base
+      .replace(/[\u0000-\u001f]/g, "")
+      .trim()
+      .slice(0, 200) || "document"
+  );
 }

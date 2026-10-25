@@ -29,7 +29,11 @@ export function AppShell({
             <Badge tone="green">{roleLabel}</Badge>
           </div>
           <div className="flex items-center gap-3">
-            <Link href={`${root}/account`} className="rounded-lg px-2 py-1 text-right hover:bg-slate-50" title="Account settings">
+            <Link
+              href={`${root}/account`}
+              className="rounded-lg px-2 py-1 text-right hover:bg-slate-50"
+              title="Account settings"
+            >
               <span className="hidden sm:block">
                 <span className="block text-sm font-medium text-slate-900">{user.name}</span>
                 <span className="block text-xs text-slate-500">{user.email}</span>

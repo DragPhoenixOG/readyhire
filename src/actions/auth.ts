@@ -62,7 +62,10 @@ export async function login(_: ActionState, formData: FormData): Promise<ActionS
     );
   }
 
-  await db.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+  await db.user.update({
+    where: { id: user.id },
+    data: { lastLoginAt: new Date() },
+  });
   await startSession(user);
   if (!user.emailVerifiedAt) redirect("/verify-email");
   const home = homePathFor(user.role);
@@ -78,7 +81,10 @@ export async function logout() {
 /** Invalidates every session of the current user, including this one. */
 export async function signOutEverywhere() {
   const user = await requireSignedIn();
-  await db.user.update({ where: { id: user.id }, data: { sessionVersion: { increment: 1 } } });
+  await db.user.update({
+    where: { id: user.id },
+    data: { sessionVersion: { increment: 1 } },
+  });
   await audit(user.id, "SIGNED_OUT_EVERYWHERE", "User", user.id, "All sessions revoked");
   await endSession();
   redirect("/login");
@@ -196,7 +202,10 @@ export async function confirmEmail(_: ActionState, formData: FormData): Promise<
   const userId = await consumeAuthToken(String(formData.get("token") ?? ""), "EMAIL_VERIFICATION");
   if (!userId) return fail("This link has expired or was already used. Sign in to get a new one.");
 
-  const user = await db.user.update({ where: { id: userId }, data: { emailVerifiedAt: new Date() } });
+  const user = await db.user.update({
+    where: { id: userId },
+    data: { emailVerifiedAt: new Date() },
+  });
   await audit(user.id, "EMAIL_VERIFIED", "User", user.id, user.email);
 
   // Sign in the inbox owner, unless a different account is signed in on this browser.
@@ -230,8 +239,14 @@ export async function requestPasswordReset(_: ActionState, formData: FormData): 
 }
 
 const resetSchema = z
-  .object({ token: z.string().min(1), password: zPassword, confirm: z.string() })
-  .refine((v) => v.password === v.confirm, { message: "The passwords don't match." });
+  .object({
+    token: z.string().min(1),
+    password: zPassword,
+    confirm: z.string(),
+  })
+  .refine((v) => v.password === v.confirm, {
+    message: "The passwords don't match.",
+  });
 
 export async function resetPassword(_: ActionState, formData: FormData): Promise<ActionState> {
   const parsed = parseForm(resetSchema, formData);
@@ -258,8 +273,14 @@ export async function resetPassword(_: ActionState, formData: FormData): Promise
 }
 
 const changePasswordSchema = z
-  .object({ current: z.string().min(1, "Enter your current password."), password: zPassword, confirm: z.string() })
-  .refine((v) => v.password === v.confirm, { message: "The new passwords don't match." });
+  .object({
+    current: z.string().min(1, "Enter your current password."),
+    password: zPassword,
+    confirm: z.string(),
+  })
+  .refine((v) => v.password === v.confirm, {
+    message: "The new passwords don't match.",
+  });
 
 export async function changePassword(_: ActionState, formData: FormData): Promise<ActionState> {
   const sessionUser = await requireSignedIn();
@@ -269,12 +290,18 @@ export async function changePassword(_: ActionState, formData: FormData): Promis
   const limit = await rateLimit(`change-password:${sessionUser.id}`, 5, 15 * 60);
   if (!limit.ok) return fail(retryMessage(limit.retryAfterSeconds));
 
-  const user = await db.user.findUniqueOrThrow({ where: { id: sessionUser.id } });
-  if (!(await verifyPassword(parsed.data.current, user.passwordHash))) return fail("Your current password is incorrect.");
+  const user = await db.user.findUniqueOrThrow({
+    where: { id: sessionUser.id },
+  });
+  if (!(await verifyPassword(parsed.data.current, user.passwordHash)))
+    return fail("Your current password is incorrect.");
 
   const updated = await db.user.update({
     where: { id: user.id },
-    data: { passwordHash: await hashPassword(parsed.data.password), sessionVersion: { increment: 1 } },
+    data: {
+      passwordHash: await hashPassword(parsed.data.password),
+      sessionVersion: { increment: 1 },
+    },
   });
   await audit(user.id, "PASSWORD_CHANGED", "User", user.id, "Password changed; other sessions signed out");
   // Keep this browser signed in with the new session version; every other session ends.

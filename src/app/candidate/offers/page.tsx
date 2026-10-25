@@ -19,7 +19,9 @@ export default async function OffersPage() {
       include: { document: true },
       orderBy: { createdAt: "desc" },
     }),
-    db.application.count({ where: { candidateId: profile.id, status: "OFFERED" } }),
+    db.application.count({
+      where: { candidateId: profile.id, status: "OFFERED" },
+    }),
   ]);
   const active = offers.filter((o) => ACTIVE_OFFER_STATUSES.includes(o.status));
 
@@ -61,7 +63,11 @@ export default async function OffersPage() {
                   Proof:{" "}
                   {offer.document ? (
                     <>
-                      <a href={`/api/documents/${offer.document.id}`} target="_blank" className="font-medium text-brand-700 hover:underline">
+                      <a
+                        href={`/api/documents/${offer.document.id}`}
+                        target="_blank"
+                        className="font-medium text-brand-700 hover:underline"
+                      >
                         {offer.document.fileName}
                       </a>{" "}
                       <DocumentStatusBadge status={offer.document.status} />
@@ -71,43 +77,52 @@ export default async function OffersPage() {
                   )}
                 </p>
                 <div className="grid gap-4 md:grid-cols-[1fr_minmax(0,16rem)]">
-                <ActionForm action={updateOffer} submitLabel="Update offer" variant="secondary" size="sm">
-                  <input type="hidden" name="offerId" value={offer.id} />
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <Field label="Status" htmlFor={`status-${offer.id}`}>
-                      <select id={`status-${offer.id}`} name="status" defaultValue={offer.status} className={inputClass}>
-                        {Object.entries(OFFER_STATUS_LABEL).map(([value, label]) => (
-                          <option key={value} value={value}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
-                    </Field>
-                    <Field label="Joining date" htmlFor={`joining-${offer.id}`}>
-                      <input
-                        id={`joining-${offer.id}`}
-                        name="joiningDate"
-                        type="date"
-                        defaultValue={toDateInputValue(offer.joiningDate)}
-                        className={inputClass}
-                      />
-                    </Field>
+                  <ActionForm action={updateOffer} submitLabel="Update offer" variant="secondary" size="sm">
+                    <input type="hidden" name="offerId" value={offer.id} />
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <Field label="Status" htmlFor={`status-${offer.id}`}>
+                        <select
+                          id={`status-${offer.id}`}
+                          name="status"
+                          defaultValue={offer.status}
+                          className={inputClass}
+                        >
+                          {Object.entries(OFFER_STATUS_LABEL).map(([value, label]) => (
+                            <option key={value} value={value}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                      </Field>
+                      <Field label="Joining date" htmlFor={`joining-${offer.id}`}>
+                        <input
+                          id={`joining-${offer.id}`}
+                          name="joiningDate"
+                          type="date"
+                          defaultValue={toDateInputValue(offer.joiningDate)}
+                          className={inputClass}
+                        />
+                      </Field>
+                    </div>
+                  </ActionForm>
+                  <div>
+                    <p className="mb-1.5 text-sm font-medium text-slate-800">
+                      {offer.document ? "Replace offer letter" : "Attach offer letter"}
+                    </p>
+                    <DocumentUploader
+                      target={{ kind: "offer", offerId: offer.id }}
+                      label={`Offer letter from ${offer.company}`}
+                      submitLabel={offer.document ? "Replace" : "Attach"}
+                      variant="secondary"
+                    />
                   </div>
-                </ActionForm>
-                <div>
-                  <p className="mb-1.5 text-sm font-medium text-slate-800">{offer.document ? "Replace offer letter" : "Attach offer letter"}</p>
-                  <DocumentUploader
-                    target={{ kind: "offer", offerId: offer.id }}
-                    label={`Offer letter from ${offer.company}`}
-                    submitLabel={offer.document ? "Replace" : "Attach"}
-                    variant="secondary"
-                  />
-                </div>
                 </div>
               </Card>
             ))
           )}
-          <p className="text-xs text-slate-500">Offers can&apos;t be deleted — mark them declined or expired instead.</p>
+          <p className="text-xs text-slate-500">
+            Offers can&apos;t be deleted — mark them declined or expired instead.
+          </p>
         </div>
 
         <Card title="Add an offer">
@@ -138,7 +153,9 @@ export default async function OffersPage() {
                 <input id="joiningDate" name="joiningDate" type="date" className={inputClass} />
               </Field>
             </div>
-            <p className="text-xs text-slate-500">After adding it, attach the offer letter so Readyhire can mark the offer as verified.</p>
+            <p className="text-xs text-slate-500">
+              After adding it, attach the offer letter so Readyhire can mark the offer as verified.
+            </p>
           </ActionForm>
         </Card>
       </div>

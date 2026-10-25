@@ -31,10 +31,16 @@ export async function encodeSession(payload: SessionPayload) {
 export async function decodeSession(token: string | undefined): Promise<SessionPayload | null> {
   if (!token) return null;
   try {
-    const { payload } = await jwtVerify(token, getKey(), { algorithms: ["HS256"] });
+    const { payload } = await jwtVerify(token, getKey(), {
+      algorithms: ["HS256"],
+    });
     if (typeof payload.userId !== "string" || typeof payload.role !== "string") return null;
     if (!ROLES.includes(payload.role) || typeof payload.sv !== "number") return null;
-    return { userId: payload.userId, role: payload.role as SessionRole, sv: payload.sv };
+    return {
+      userId: payload.userId,
+      role: payload.role as SessionRole,
+      sv: payload.sv,
+    };
   } catch {
     return null;
   }

@@ -42,7 +42,10 @@ export default async function RecruiterApplicationPage({ params }: PageProps<"/r
       job: true,
       candidate: { include: candidateSummaryInclude },
       interviews: { orderBy: { scheduledAt: "asc" } },
-      events: { include: { actor: { select: { name: true, role: true } } }, orderBy: { createdAt: "desc" } },
+      events: {
+        include: { actor: { select: { name: true, role: true } } },
+        orderBy: { createdAt: "desc" },
+      },
       ghostingReports: { orderBy: { createdAt: "desc" } },
     },
   });
@@ -77,7 +80,7 @@ export default async function RecruiterApplicationPage({ params }: PageProps<"/r
               </Notice>
               {application.coverNote && (
                 <div className="mt-4 rounded-lg bg-slate-50 px-3 py-2 text-sm">
-                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Candidate&apos;s note</p>
+                  <p className="text-xs font-medium tracking-wide text-slate-500 uppercase">Candidate&apos;s note</p>
                   <p className="mt-1 whitespace-pre-line text-slate-700">{application.coverNote}</p>
                 </div>
               )}
@@ -86,8 +89,19 @@ export default async function RecruiterApplicationPage({ params }: PageProps<"/r
                   <p className="mb-3 font-medium text-emerald-800">Accept</p>
                   <ActionForm action={acceptApplication} submitLabel="Accept application">
                     <input type="hidden" name="applicationId" value={application.id} />
-                    <Field label="Message to the candidate" htmlFor="accept-message" hint="Next steps, e.g. the first interview round.">
-                      <textarea id="accept-message" name="message" rows={4} required minLength={MIN_REASON_LENGTH} className={inputClass} />
+                    <Field
+                      label="Message to the candidate"
+                      htmlFor="accept-message"
+                      hint="Next steps, e.g. the first interview round."
+                    >
+                      <textarea
+                        id="accept-message"
+                        name="message"
+                        rows={4}
+                        required
+                        minLength={MIN_REASON_LENGTH}
+                        className={inputClass}
+                      />
                     </Field>
                   </ActionForm>
                 </div>
@@ -102,18 +116,43 @@ export default async function RecruiterApplicationPage({ params }: PageProps<"/r
           {(status === "ACCEPTED" || status === "INTERVIEWING") && (
             <Card title="Next step" description="Schedule interviews on Readyhire, then extend an offer.">
               <div className="space-y-3">
-                <Disclosure summary="Schedule an interview" tone="primary" defaultOpen={application.interviews.length === 0}>
+                <Disclosure
+                  summary="Schedule an interview"
+                  tone="primary"
+                  defaultOpen={application.interviews.length === 0}
+                >
                   <ActionForm action={scheduleInterview} submitLabel="Schedule interview" resetOnSuccess>
                     <input type="hidden" name="applicationId" value={application.id} />
                     <div className="grid gap-3 sm:grid-cols-2">
                       <Field label="Round" htmlFor="round">
-                        <input id="round" name="round" required placeholder="Technical round 1" className={inputClass} />
+                        <input
+                          id="round"
+                          name="round"
+                          required
+                          placeholder="Technical round 1"
+                          className={inputClass}
+                        />
                       </Field>
                       <Field label="Date & time (IST)" htmlFor="scheduledAt">
-                        <input id="scheduledAt" name="scheduledAt" type="datetime-local" required className={inputClass} />
+                        <input
+                          id="scheduledAt"
+                          name="scheduledAt"
+                          type="datetime-local"
+                          required
+                          className={inputClass}
+                        />
                       </Field>
                       <Field label="Duration (minutes)" htmlFor="durationMins">
-                        <input id="durationMins" name="durationMins" type="number" min={15} max={480} defaultValue={45} required className={inputClass} />
+                        <input
+                          id="durationMins"
+                          name="durationMins"
+                          type="number"
+                          min={15}
+                          max={480}
+                          defaultValue={45}
+                          required
+                          className={inputClass}
+                        />
                       </Field>
                       <Field label="Mode" htmlFor="mode">
                         <select id="mode" name="mode" defaultValue="VIDEO" className={inputClass}>
@@ -124,10 +163,18 @@ export default async function RecruiterApplicationPage({ params }: PageProps<"/r
                           ))}
                         </select>
                       </Field>
-                      <Field label="Meeting link or address" htmlFor="location" hint="For video, phone or office interviews.">
+                      <Field
+                        label="Meeting link or address"
+                        htmlFor="location"
+                        hint="For video, phone or office interviews."
+                      >
                         <input id="location" name="location" className={inputClass} />
                       </Field>
-                      <Field label="Readyhire room" htmlFor="room" hint="Controlled room near the candidate — reduces malpractice.">
+                      <Field
+                        label="Readyhire room"
+                        htmlFor="room"
+                        hint="Controlled room near the candidate — reduces malpractice."
+                      >
                         <select id="room" name="room" defaultValue="" className={inputClass}>
                           <option value="">Not using a room</option>
                           {READYHIRE_ROOMS.map((room) => (
@@ -146,7 +193,14 @@ export default async function RecruiterApplicationPage({ params }: PageProps<"/r
                     <input type="hidden" name="applicationId" value={application.id} />
                     <div className="grid gap-3 sm:grid-cols-2">
                       <Field label="Offer CTC (LPA)" htmlFor="offerCtcLpa">
-                        <input id="offerCtcLpa" name="offerCtcLpa" type="number" step="0.1" min={0} className={inputClass} />
+                        <input
+                          id="offerCtcLpa"
+                          name="offerCtcLpa"
+                          type="number"
+                          step="0.1"
+                          min={0}
+                          className={inputClass}
+                        />
                       </Field>
                       <Field label="Joining date" htmlFor="offerJoiningDate">
                         <input
@@ -195,13 +249,31 @@ export default async function RecruiterApplicationPage({ params }: PageProps<"/r
             <Card title="Outcome">
               <DescriptionList
                 items={[
-                  { label: "Status", value: <ApplicationStatusBadge status={status} /> },
-                  { label: "Recorded", value: formatDate(application.outcomeAt ?? application.updatedAt) },
+                  {
+                    label: "Status",
+                    value: <ApplicationStatusBadge status={status} />,
+                  },
+                  {
+                    label: "Recorded",
+                    value: formatDate(application.outcomeAt ?? application.updatedAt),
+                  },
                   ...(status === "REJECTED"
-                    ? [{ label: "Reason sent to candidate", value: `${application.rejectionCategory}: ${application.rejectionReason}` }]
+                    ? [
+                        {
+                          label: "Reason sent to candidate",
+                          value: `${application.rejectionCategory}: ${application.rejectionReason}`,
+                        },
+                      ]
                     : []),
                   ...(status === "NOT_JOINED" ? [{ label: "Notes", value: application.notJoinedReason }] : []),
-                  ...(status === "WITHDRAWN" ? [{ label: "Candidate's reason", value: application.withdrawnReason }] : []),
+                  ...(status === "WITHDRAWN"
+                    ? [
+                        {
+                          label: "Candidate's reason",
+                          value: application.withdrawnReason,
+                        },
+                      ]
+                    : []),
                 ]}
               />
             </Card>
@@ -212,9 +284,20 @@ export default async function RecruiterApplicationPage({ params }: PageProps<"/r
               interviews={application.interviews}
               renderAction={(interview) =>
                 interview.status === "SCHEDULED" && isOpen ? (
-                  <ActionForm action={updateInterviewStatus} submitLabel="Update" variant="secondary" size="sm" className="flex items-end gap-2 space-y-0">
+                  <ActionForm
+                    action={updateInterviewStatus}
+                    submitLabel="Update"
+                    variant="secondary"
+                    size="sm"
+                    className="flex items-end gap-2 space-y-0"
+                  >
                     <input type="hidden" name="interviewId" value={interview.id} />
-                    <select name="status" aria-label="Interview outcome" defaultValue="COMPLETED" className={`${inlineInputClass} py-1.5`}>
+                    <select
+                      name="status"
+                      aria-label="Interview outcome"
+                      defaultValue="COMPLETED"
+                      className={`${inlineInputClass} py-1.5`}
+                    >
                       <option value="COMPLETED">Completed</option>
                       <option value="NO_SHOW">No-show</option>
                       <option value="CANCELLED">Cancelled</option>
@@ -254,8 +337,19 @@ export default async function RecruiterApplicationPage({ params }: PageProps<"/r
                         ))}
                       </select>
                     </Field>
-                    <Field label="Details" htmlFor="details" hint="Dates and attempts to reach the candidate. Reviewed by Readyhire.">
-                      <textarea id="details" name="details" rows={3} required minLength={MIN_REASON_LENGTH} className={inputClass} />
+                    <Field
+                      label="Details"
+                      htmlFor="details"
+                      hint="Dates and attempts to reach the candidate. Reviewed by Readyhire."
+                    >
+                      <textarea
+                        id="details"
+                        name="details"
+                        rows={3}
+                        required
+                        minLength={MIN_REASON_LENGTH}
+                        className={inputClass}
+                      />
                     </Field>
                   </ActionForm>
                 )}
@@ -281,7 +375,9 @@ export default async function RecruiterApplicationPage({ params }: PageProps<"/r
             <CandidateSignals
               summary={summary}
               verifiedAt={candidate.verifiedAt}
-              verificationMethodLabel={candidate.verificationMethod ? VERIFICATION_METHOD_LABEL[candidate.verificationMethod] : null}
+              verificationMethodLabel={
+                candidate.verificationMethod ? VERIFICATION_METHOD_LABEL[candidate.verificationMethod] : null
+              }
               applicationId={application.id}
               recruiterId={recruiter.id}
             />
@@ -294,10 +390,15 @@ export default async function RecruiterApplicationPage({ params }: PageProps<"/r
                 {candidate.experienceYears != null && ` · ${candidate.experienceYears} yrs`}
                 {candidate.city && ` · ${candidate.city}`}
               </p>
-              <Chips items={(candidate.skills ?? "").split(",").map((s) => s.trim()).filter(Boolean)} />
+              <Chips
+                items={(candidate.skills ?? "")
+                  .split(",")
+                  .map((s) => s.trim())
+                  .filter(Boolean)}
+              />
               {status !== "APPLIED" && status !== "REJECTED" ? (
                 <div className="rounded-lg bg-slate-50 px-3 py-2">
-                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Contact</p>
+                  <p className="text-xs font-medium tracking-wide text-slate-500 uppercase">Contact</p>
                   <p className="text-slate-800">{candidate.user.email}</p>
                   {candidate.phone && <p className="text-slate-800">{candidate.phone}</p>}
                 </div>
@@ -314,7 +415,12 @@ export default async function RecruiterApplicationPage({ params }: PageProps<"/r
 
 function RejectForm({ applicationId }: { applicationId: string }) {
   return (
-    <ActionForm action={rejectApplication} submitLabel="Reject application" variant="danger" confirm="Reject this application? The candidate will see your reason.">
+    <ActionForm
+      action={rejectApplication}
+      submitLabel="Reject application"
+      variant="danger"
+      confirm="Reject this application? The candidate will see your reason."
+    >
       <input type="hidden" name="applicationId" value={applicationId} />
       <Field label="Reason" htmlFor={`category-${applicationId}`}>
         <select id={`category-${applicationId}`} name="category" required defaultValue="" className={inputClass}>
@@ -326,8 +432,19 @@ function RejectForm({ applicationId }: { applicationId: string }) {
           ))}
         </select>
       </Field>
-      <Field label="Explanation for the candidate" htmlFor={`reason-${applicationId}`} hint={`At least ${MIN_REASON_LENGTH} characters. Be specific and respectful.`}>
-        <textarea id={`reason-${applicationId}`} name="reason" rows={4} required minLength={MIN_REASON_LENGTH} className={inputClass} />
+      <Field
+        label="Explanation for the candidate"
+        htmlFor={`reason-${applicationId}`}
+        hint={`At least ${MIN_REASON_LENGTH} characters. Be specific and respectful.`}
+      >
+        <textarea
+          id={`reason-${applicationId}`}
+          name="reason"
+          rows={4}
+          required
+          minLength={MIN_REASON_LENGTH}
+          className={inputClass}
+        />
       </Field>
     </ActionForm>
   );

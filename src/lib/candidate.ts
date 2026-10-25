@@ -5,7 +5,16 @@ import { addDays, daysFromToday } from "@/lib/format";
 
 /** Everything needed to compute the trust signals recruiters and admins see for a candidate. */
 export const candidateSummaryInclude = {
-  user: { select: { id: true, name: true, email: true, status: true, flagged: true, flagReason: true } },
+  user: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      status: true,
+      flagged: true,
+      flagReason: true,
+    },
+  },
   offers: { select: { status: true, document: { select: { status: true } } } },
   applications: {
     select: {
@@ -13,7 +22,12 @@ export const candidateSummaryInclude = {
       status: true,
       outcomeAt: true,
       job: {
-        select: { id: true, title: true, recruiterId: true, company: { select: { name: true } } },
+        select: {
+          id: true,
+          title: true,
+          recruiterId: true,
+          company: { select: { name: true } },
+        },
       },
       events: { where: { type: "COMMITMENT_RELEASED" }, select: { id: true } },
     },
@@ -53,7 +67,11 @@ export function summarizeCandidate(candidate: CandidateWithSummary, now = new Da
     releases: candidate.applications.reduce((n, a) => n + a.events.length, 0),
     upheldGhosting: candidate.ghostingReports.length,
     joined: joined
-      ? { jobTitle: joined.job.title, companyName: joined.job.company.name, at: joined.outcomeAt }
+      ? {
+          jobTitle: joined.job.title,
+          companyName: joined.job.company.name,
+          at: joined.outcomeAt,
+        }
       : null,
     notice: {
       verified: candidate.verificationStatus === "VERIFIED",

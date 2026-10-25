@@ -27,7 +27,17 @@ export function RecruiterApplicationsTable({
 }) {
   const now = new Date();
   return (
-    <Table head={["Candidate", ...(showJob ? ["Job"] : []), "Applied", "Status", "Response", "Joining", "Offers & commitment"]}>
+    <Table
+      head={[
+        "Candidate",
+        ...(showJob ? ["Job"] : []),
+        "Applied",
+        "Status",
+        "Response",
+        "Joining",
+        "Offers & commitment",
+      ]}
+    >
       {applications.map((a) => {
         const summary = summarizeCandidate(a.candidate, now);
         const due = responseDueAt(a.createdAt);
@@ -52,12 +62,14 @@ export function RecruiterApplicationsTable({
                   <Badge tone="amber">Due in {formatHours(-hoursSince(due, now))}</Badge>
                 )
               ) : a.respondedAt ? (
-                <span className="text-xs text-slate-500">Replied in {formatHours(hoursSince(a.createdAt, a.respondedAt))}</span>
+                <span className="text-xs text-slate-500">
+                  Replied in {formatHours(hoursSince(a.createdAt, a.respondedAt))}
+                </span>
               ) : (
                 "—"
               )}
             </Td>
-            <Td className="whitespace-nowrap text-xs">{joinabilityLabel(summary.notice)}</Td>
+            <Td className="text-xs whitespace-nowrap">{joinabilityLabel(summary.notice)}</Td>
             <Td>
               <div className="flex flex-wrap gap-1.5">
                 <OffersBadge summary={summary} />

@@ -41,11 +41,16 @@ export function sentEmails(to?: string): SentEmail[] {
 export async function linkFromEmail(to: string, subject: RegExp): Promise<string> {
   let link: string | undefined;
   await expect
-    .poll(() => {
-      const email = sentEmails(to).reverse().find((e) => subject.test(e.subject));
-      link = email?.text.match(/https?:\/\/\S+/)?.[0];
-      return link;
-    }, { timeout: 10_000 })
+    .poll(
+      () => {
+        const email = sentEmails(to)
+          .reverse()
+          .find((e) => subject.test(e.subject));
+        link = email?.text.match(/https?:\/\/\S+/)?.[0];
+        return link;
+      },
+      { timeout: 10_000 },
+    )
     .toBeTruthy();
   return link!;
 }

@@ -14,7 +14,11 @@ export default async function CandidateApplicationsPage() {
     where: { candidateId: profile.id },
     include: {
       job: { include: { company: true } },
-      interviews: { where: { status: "SCHEDULED", scheduledAt: { gte: new Date() } }, orderBy: { scheduledAt: "asc" }, take: 1 },
+      interviews: {
+        where: { status: "SCHEDULED", scheduledAt: { gte: new Date() } },
+        orderBy: { scheduledAt: "asc" },
+        take: 1,
+      },
     },
     orderBy: { updatedAt: "desc" },
   });
@@ -60,7 +64,9 @@ export default async function CandidateApplicationsPage() {
                         : (a.responseMessage ?? "—")}
                   </p>
                 </Td>
-                <Td className="whitespace-nowrap text-xs">{a.interviews[0] ? formatDateTime(a.interviews[0].scheduledAt) : "—"}</Td>
+                <Td className="text-xs whitespace-nowrap">
+                  {a.interviews[0] ? formatDateTime(a.interviews[0].scheduledAt) : "—"}
+                </Td>
               </tr>
             ))}
           </Table>

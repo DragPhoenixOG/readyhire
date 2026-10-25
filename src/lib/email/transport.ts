@@ -2,18 +2,34 @@ import "server-only";
 import { appendFile } from "node:fs/promises";
 import { env } from "@/lib/env";
 
-export type EmailMessage = { to: string; subject: string; text: string; html: string };
+export type EmailMessage = {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+};
 
 async function sendWithResend(message: EmailMessage) {
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
-    headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: env.EMAIL_FROM, to: [message.to], subject: message.subject, text: message.text, html: message.html }),
+    headers: {
+      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: env.EMAIL_FROM,
+      to: [message.to],
+      subject: message.subject,
+      text: message.text,
+      html: message.html,
+    }),
   });
   if (!response.ok) throw new Error(`Resend responded ${response.status}: ${await response.text()}`);
 }
 
-type SmtpTransport = { sendMail: (options: Record<string, unknown>) => Promise<unknown> };
+type SmtpTransport = {
+  sendMail: (options: Record<string, unknown>) => Promise<unknown>;
+};
 let smtp: SmtpTransport | undefined;
 
 async function sendWithSmtp(message: EmailMessage) {

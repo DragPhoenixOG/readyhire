@@ -19,7 +19,9 @@ export async function signPayload(purpose: string, payload: Record<string, unkno
 
 export async function verifyPayload<T>(purpose: string, token: string): Promise<T | null> {
   try {
-    const { payload } = await jwtVerify(token, key(purpose), { algorithms: ["HS256"] });
+    const { payload } = await jwtVerify(token, key(purpose), {
+      algorithms: ["HS256"],
+    });
     return payload as T;
   } catch {
     return null;

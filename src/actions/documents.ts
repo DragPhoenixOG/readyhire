@@ -22,7 +22,10 @@ import { ALLOWED_UPLOAD_TYPES, cleanFileName, matchesSignature, uploadProblem } 
 const TICKET_PURPOSE = "document-upload";
 
 const targetSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("required"), type: z.enum(["OFFER_LETTER", "NOTICE_POLICY", "RESIGNATION_PROOF"]) }),
+  z.object({
+    kind: z.literal("required"),
+    type: z.enum(["OFFER_LETTER", "NOTICE_POLICY", "RESIGNATION_PROOF"]),
+  }),
   z.object({ kind: z.literal("offer"), offerId: z.string().min(1).max(50) }),
 ]);
 export type UploadTargetInput = z.infer<typeof targetSchema>;
@@ -51,7 +54,10 @@ async function targetProblem(candidateId: string, verificationStatus: string, ta
       ? null
       : "Documents are locked while verification is pending or complete.";
   }
-  const offer = await db.offer.findFirst({ where: { id: target.offerId, candidateId }, select: { id: true } });
+  const offer = await db.offer.findFirst({
+    where: { id: target.offerId, candidateId },
+    select: { id: true },
+  });
   return offer ? null : "Offer not found.";
 }
 
@@ -64,14 +70,22 @@ export async function prepareDocumentUpload(input: z.input<typeof prepareSchema>
   const limit = await rateLimit(`upload:${user.id}`, 30, 60 * 60);
   if (!limit.ok) return { ok: false, error: retryMessage(limit.retryAfterSeconds) };
 
-  const problem = uploadProblem(contentType, size) ?? (await targetProblem(profile.id, profile.verificationStatus, target));
+  const problem =
+    uploadProblem(contentType, size) ?? (await targetProblem(profile.id, profile.verificationStatus, target));
   if (problem) return { ok: false, error: problem };
 
   const key = `candidates/${profile.id}/${randomUUID()}.${ALLOWED_UPLOAD_TYPES[contentType]}`;
   const upload = await documentStore().createUpload(key, contentType, size);
   const ticket = await signPayload(
     TICKET_PURPOSE,
-    { candidateId: profile.id, key, contentType, size, fileName: cleanFileName(fileName), target } satisfies Ticket,
+    {
+      candidateId: profile.id,
+      key,
+      contentType,
+      size,
+      fileName: cleanFileName(fileName),
+      target,
+    } satisfies Ticket,
     UPLOAD_URL_TTL_SECONDS + 10 * 60,
   );
   return { ok: true, upload, ticket };
@@ -83,7 +97,13 @@ export async function completeDocumentUpload(ticketToken: string): Promise<Actio
   if (!ticket || ticket.candidateId !== profile.id) return fail("This upload expired. Please try again.");
 
   // A double submit of the same ticket is harmless.
-  if (await db.document.findUnique({ where: { storageKey: ticket.key }, select: { id: true } })) return done();
+  if (
+    await db.document.findUnique({
+      where: { storageKey: ticket.key },
+      select: { id: true },
+    })
+  )
+    return done();
 
   const store = documentStore();
   const stored = await store.stat(ticket.key);
@@ -100,24 +120,41 @@ export async function completeDocumentUpload(ticketToken: string): Promise<Actio
     return fail(problem);
   }
 
-  const file = { storageKey: ticket.key, fileName: ticket.fileName, mimeType: ticket.contentType, sizeBytes: ticket.size };
+  const file = {
+    storageKey: ticket.key,
+    fileName: ticket.fileName,
+    mimeType: ticket.contentType,
+    sizeBytes: ticket.size,
+  };
   let replacedKeys: string[] = [];
 
   if (ticket.target.kind === "required") {
     const type = ticket.target.type;
     // One current document per required type: a new upload replaces the previous one.
-    const previous = await db.document.findMany({ where: { candidateId: profile.id, type } });
+    const previous = await db.document.findMany({
+      where: { candidateId: profile.id, type },
+    });
     await db.$transaction([
-      db.document.deleteMany({ where: { id: { in: previous.map((d) => d.id) } } }),
+      db.document.deleteMany({
+        where: { id: { in: previous.map((d) => d.id) } },
+      }),
       db.document.create({ data: { candidateId: profile.id, type, ...file } }),
     ]);
     replacedKeys = previous.map((d) => d.storageKey);
   } else {
     const offerId = ticket.target.offerId;
-    const offer = await db.offer.findUniqueOrThrow({ where: { id: offerId }, include: { document: true } });
+    const offer = await db.offer.findUniqueOrThrow({
+      where: { id: offerId },
+      include: { document: true },
+    });
     await db.$transaction(async (tx) => {
-      const document = await tx.document.create({ data: { candidateId: profile.id, type: "OTHER_OFFER", ...file } });
-      await tx.offer.update({ where: { id: offerId }, data: { documentId: document.id } });
+      const document = await tx.document.create({
+        data: { candidateId: profile.id, type: "OTHER_OFFER", ...file },
+      });
+      await tx.offer.update({
+        where: { id: offerId },
+        data: { documentId: document.id },
+      });
       if (offer.document) await tx.document.delete({ where: { id: offer.document.id } });
     });
     replacedKeys = offer.document ? [offer.document.storageKey] : [];

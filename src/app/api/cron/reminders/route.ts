@@ -39,15 +39,34 @@ export async function GET(request: Request) {
     },
     include: {
       candidate: { include: { user: { select: { name: true } } } },
-      job: { include: { recruiter: { include: { user: { select: { id: true, name: true, email: true } } } } } },
+      job: {
+        include: {
+          recruiter: {
+            include: {
+              user: { select: { id: true, name: true, email: true } },
+            },
+          },
+        },
+      },
     },
   });
 
   // One email per recruiter covering everything that needs attention.
-  const byRecruiter = new Map<string, { user: { name: string; email: string }; dueSoon: typeof pending; overdue: typeof pending }>();
+  const byRecruiter = new Map<
+    string,
+    {
+      user: { name: string; email: string };
+      dueSoon: typeof pending;
+      overdue: typeof pending;
+    }
+  >();
   for (const application of pending) {
     const user = application.job.recruiter.user;
-    const entry = byRecruiter.get(user.id) ?? { user, dueSoon: [], overdue: [] };
+    const entry = byRecruiter.get(user.id) ?? {
+      user,
+      dueSoon: [],
+      overdue: [],
+    };
     if (application.createdAt < overdueBefore) {
       if (!application.overdueAlertSentAt) entry.overdue.push(application);
     } else if (!application.reminderSentAt) {
@@ -61,10 +80,16 @@ export async function GET(request: Request) {
     if (dueSoon.length + overdue.length === 0) continue;
     const line = (a: (typeof pending)[number]) =>
       `${a.candidate.user.name} — ${a.job.title} (due ${formatDateTime(responseDueAt(a.createdAt))})`;
-    const ok = await sendEmail({ to: user.email, ...emails.responseReminder(user.name, dueSoon.map(line), overdue.map(line)) });
+    const ok = await sendEmail({
+      to: user.email,
+      ...emails.responseReminder(user.name, dueSoon.map(line), overdue.map(line)),
+    });
     if (!ok) continue;
     sent += 1;
-    await db.application.updateMany({ where: { id: { in: dueSoon.map((a) => a.id) } }, data: { reminderSentAt: now } });
+    await db.application.updateMany({
+      where: { id: { in: dueSoon.map((a) => a.id) } },
+      data: { reminderSentAt: now },
+    });
     await db.application.updateMany({
       where: { id: { in: overdue.map((a) => a.id) } },
       data: { overdueAlertSentAt: now, reminderSentAt: now },
@@ -72,7 +97,13 @@ export async function GET(request: Request) {
   }
 
   await pruneRateLimits();
-  await db.authToken.deleteMany({ where: { OR: [{ expiresAt: { lt: now } }, { usedAt: { not: null } }] } });
+  await db.authToken.deleteMany({
+    where: { OR: [{ expiresAt: { lt: now } }, { usedAt: { not: null } }] },
+  });
 
-  return Response.json({ ok: true, recruitersEmailed: sent, applicationsChecked: pending.length });
+  return Response.json({
+    ok: true,
+    recruitersEmailed: sent,
+    applicationsChecked: pending.length,
+  });
 }

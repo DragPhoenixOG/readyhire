@@ -11,8 +11,12 @@ export default async function RecruiterLayout({ children }: LayoutProps<"/recrui
 
   const [awaiting, overdue] = approved
     ? await Promise.all([
-        db.application.count({ where: { status: "APPLIED", job: { recruiterId: recruiter.id } } }),
-        db.application.count({ where: { ...overdueWhere(), job: { recruiterId: recruiter.id } } }),
+        db.application.count({
+          where: { status: "APPLIED", job: { recruiterId: recruiter.id } },
+        }),
+        db.application.count({
+          where: { ...overdueWhere(), job: { recruiterId: recruiter.id } },
+        }),
       ])
     : [0, 0];
 
@@ -25,7 +29,11 @@ export default async function RecruiterLayout({ children }: LayoutProps<"/recrui
         approved
           ? [
               { href: "/recruiter", label: "Dashboard" },
-              { href: "/recruiter/applications", label: "Applications", count: awaiting },
+              {
+                href: "/recruiter/applications",
+                label: "Applications",
+                count: awaiting,
+              },
               { href: "/recruiter/jobs", label: "Jobs" },
               { href: "/recruiter/candidates", label: "Verified talent" },
             ]

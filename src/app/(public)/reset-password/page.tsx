@@ -19,11 +19,31 @@ export default async function ResetPasswordPage({ searchParams }: PageProps<"/re
         {valid ? (
           <ActionForm action={resetPassword} submitLabel="Save password" pendingLabel="Saving…" className="mt-6">
             <input type="hidden" name="token" value={token} />
-            <Field label="New password" htmlFor="password" hint="At least 8 characters. You'll be signed out on other devices.">
-              <input id="password" name="password" type="password" autoComplete="new-password" minLength={8} required className={inputClass} />
+            <Field
+              label="New password"
+              htmlFor="password"
+              hint="At least 8 characters. You'll be signed out on other devices."
+            >
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="new-password"
+                minLength={8}
+                required
+                className={inputClass}
+              />
             </Field>
             <Field label="Repeat new password" htmlFor="confirm">
-              <input id="confirm" name="confirm" type="password" autoComplete="new-password" minLength={8} required className={inputClass} />
+              <input
+                id="confirm"
+                name="confirm"
+                type="password"
+                autoComplete="new-password"
+                minLength={8}
+                required
+                className={inputClass}
+              />
             </Field>
           </ActionForm>
         ) : (

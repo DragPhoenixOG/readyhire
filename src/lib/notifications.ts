@@ -25,7 +25,14 @@ async function applicationContext(applicationId: string) {
     where: { id: applicationId },
     include: {
       candidate: { include: { user: { select: { name: true, email: true } } } },
-      job: { include: { company: true, recruiter: { include: { user: { select: { name: true, email: true } } } } } },
+      job: {
+        include: {
+          company: true,
+          recruiter: {
+            include: { user: { select: { name: true, email: true } } },
+          },
+        },
+      },
     },
   });
 }
@@ -33,7 +40,10 @@ async function applicationContext(applicationId: string) {
 export const notify = {
   verificationDecision(candidateId: string) {
     later(async () => {
-      const c = await db.candidateProfile.findUniqueOrThrow({ where: { id: candidateId }, include: { user: true } });
+      const c = await db.candidateProfile.findUniqueOrThrow({
+        where: { id: candidateId },
+        include: { user: true },
+      });
       const message =
         c.verificationStatus === "VERIFIED"
           ? emails.verificationApproved(c.user.name)
@@ -44,8 +54,14 @@ export const notify = {
 
   recruiterDecision(recruiterId: string) {
     later(async () => {
-      const r = await db.recruiterProfile.findUniqueOrThrow({ where: { id: recruiterId }, include: { user: true } });
-      await sendEmail({ to: r.user.email, ...emails.recruiterDecision(r.user.name, r.approvalStatus === "APPROVED", r.reviewNote) });
+      const r = await db.recruiterProfile.findUniqueOrThrow({
+        where: { id: recruiterId },
+        include: { user: true },
+      });
+      await sendEmail({
+        to: r.user.email,
+        ...emails.recruiterDecision(r.user.name, r.approvalStatus === "APPROVED", r.reviewNote),
+      });
     });
   },
 
@@ -55,7 +71,13 @@ export const notify = {
       const recruiter = a.job.recruiter.user;
       await sendEmail({
         to: recruiter.email,
-        ...emails.applicationReceived(recruiter.name, a.candidate.user.name, a.job.title, responseDueAt(a.createdAt), a.id),
+        ...emails.applicationReceived(
+          recruiter.name,
+          a.candidate.user.name,
+          a.job.title,
+          responseDueAt(a.createdAt),
+          a.id,
+        ),
       });
     });
   },
@@ -66,7 +88,14 @@ export const notify = {
       const { name, email } = a.candidate.user;
       const message =
         a.status === "REJECTED"
-          ? emails.applicationRejected(name, a.job.title, a.job.company.name, a.rejectionCategory ?? "", a.rejectionReason ?? "", a.id)
+          ? emails.applicationRejected(
+              name,
+              a.job.title,
+              a.job.company.name,
+              a.rejectionCategory ?? "",
+              a.rejectionReason ?? "",
+              a.id,
+            )
           : emails.applicationAccepted(name, a.job.title, a.job.company.name, a.responseMessage ?? "", a.id);
       await sendEmail({ to: email, ...message });
     });
@@ -74,7 +103,9 @@ export const notify = {
 
   interviewScheduled(interviewId: string) {
     later(async () => {
-      const interview = await db.interview.findUniqueOrThrow({ where: { id: interviewId } });
+      const interview = await db.interview.findUniqueOrThrow({
+        where: { id: interviewId },
+      });
       const a = await applicationContext(interview.applicationId);
       await sendEmail({
         to: a.candidate.user.email,
@@ -94,7 +125,14 @@ export const notify = {
       const a = await applicationContext(applicationId);
       await sendEmail({
         to: a.candidate.user.email,
-        ...emails.offerExtended(a.candidate.user.name, a.job.title, a.job.company.name, a.offerCtcLpa, a.offerJoiningDate, a.id),
+        ...emails.offerExtended(
+          a.candidate.user.name,
+          a.job.title,
+          a.job.company.name,
+          a.offerCtcLpa,
+          a.offerJoiningDate,
+          a.id,
+        ),
       });
     });
   },
@@ -110,7 +148,10 @@ export const notify = {
         withdrew: `${who} withdrew from ${a.job.title}`,
       }[change];
       const recruiter = a.job.recruiter.user;
-      await sendEmail({ to: recruiter.email, ...emails.candidateUpdate(recruiter.name, headline, detail ?? null, a.id) });
+      await sendEmail({
+        to: recruiter.email,
+        ...emails.candidateUpdate(recruiter.name, headline, detail ?? null, a.id),
+      });
     });
   },
 };

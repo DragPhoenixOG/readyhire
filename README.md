@@ -27,18 +27,18 @@ Open <http://localhost:3000>. The sign-in page lists the demo accounts.
 
 Every seeded account uses the password **`Readyhire@123`**.
 
-| Role                                 | Email                       |
-| ------------------------------------ | --------------------------- |
-| Admin                                | `admin@readyhire.in`        |
-| Recruiter, approved (Northwind GCC)  | `priya.menon@northwind.com` |
-| Recruiter, approved, overdue replies | `arjun.rao@contoso.com`     |
-| Recruiter, awaiting approval         | `kavya.iyer@fabrikam.io`    |
-| Candidate, verified and committed    | `ananya.sharma@example.com` |
-| Candidate, offer extended            | `vikram.singh@example.com`  |
-| Candidate, verification pending      | `rohan.verma@example.com`   |
-| Candidate, changes requested         | `divya.menon@example.com`   |
-| Candidate, brand new                 | `neha.gupta@example.com`    |
-| Candidate, restricted (can't sign in)| `sameer.khan@example.com`   |
+| Role                                  | Email                       |
+| ------------------------------------- | --------------------------- |
+| Admin                                 | `admin@readyhire.in`        |
+| Recruiter, approved (Northwind GCC)   | `priya.menon@northwind.com` |
+| Recruiter, approved, overdue replies  | `arjun.rao@contoso.com`     |
+| Recruiter, awaiting approval          | `kavya.iyer@fabrikam.io`    |
+| Candidate, verified and committed     | `ananya.sharma@example.com` |
+| Candidate, offer extended             | `vikram.singh@example.com`  |
+| Candidate, verification pending       | `rohan.verma@example.com`   |
+| Candidate, changes requested          | `divya.menon@example.com`   |
+| Candidate, brand new                  | `neha.gupta@example.com`    |
+| Candidate, restricted (can't sign in) | `sameer.khan@example.com`   |
 
 Seed dates are relative to when you run the seed, so there are always upcoming interviews, fresh applications and
 one overdue reply. Run `npm run db:seed` at any time to reset the demo data.
@@ -57,16 +57,16 @@ one overdue reply. Run `npm run db:seed` at any time to reset the demo data.
 
 ## Core rules and where they're enforced
 
-| Rule | Enforcement |
-| ---- | ----------- |
-| Candidates are listed only after their offer letter, notice policy and resignation evidence are verified | `approveCandidate` requires all three documents to be verified, and the verified-talent list and job applications are limited to verified candidates (`src/actions/admin.ts`, `src/lib/candidate.ts`, `applyToJob`) |
-| Verified details can't be changed silently | Notice details, documents and current company lock while verification is pending or done. Changing them means reopening verification, which hides the profile from recruiters. |
-| Recruiters sign up with a company domain | Personal and disposable mailboxes are blocked, and the email domain must match the company website (`src/lib/domain.ts`). Admins also approve each recruiter. |
-| Recruiters respond to every application | Accepting needs a message and rejecting needs a category plus an explanation of at least 15 characters. Replies are due within 72 hours. While any reply is overdue the recruiter can't post jobs, and a job can't be closed while applications are still waiting (`src/actions/recruiter.ts`). |
-| One commitment at a time | The candidate profile holds a single, unique `committedApplicationId`, set with a conditional update. Committed candidates can't apply elsewhere, and every release is logged and shown to recruiters. |
-| Offer-shopping visibility | Active offers = offers the candidate declared as holding or accepted + offers extended through Readyhire, with a count of declared offers whose proof has been verified (`summarizeCandidate`) |
-| Joining is tracked | An offered application ends as **Joined** or **Did not join**, which also clears the commitment. Recruiters can report ghosting; admins uphold or dismiss reports, and upheld reports appear on the candidate's profile. |
-| Documents stay private | Uploads are checked by file content (PDF, PNG, JPG, WebP, up to 5 MB), stored outside `public/`, and served only to their owner and to admins (`src/app/api/documents/[id]/route.ts`) |
+| Rule                                                                                                     | Enforcement                                                                                                                                                                                                                                                                                     |
+| -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Candidates are listed only after their offer letter, notice policy and resignation evidence are verified | `approveCandidate` requires all three documents to be verified, and the verified-talent list and job applications are limited to verified candidates (`src/actions/admin.ts`, `src/lib/candidate.ts`, `applyToJob`)                                                                             |
+| Verified details can't be changed silently                                                               | Notice details, documents and current company lock while verification is pending or done. Changing them means reopening verification, which hides the profile from recruiters.                                                                                                                  |
+| Recruiters sign up with a company domain                                                                 | Personal and disposable mailboxes are blocked, and the email domain must match the company website (`src/lib/domain.ts`). Admins also approve each recruiter.                                                                                                                                   |
+| Recruiters respond to every application                                                                  | Accepting needs a message and rejecting needs a category plus an explanation of at least 15 characters. Replies are due within 72 hours. While any reply is overdue the recruiter can't post jobs, and a job can't be closed while applications are still waiting (`src/actions/recruiter.ts`). |
+| One commitment at a time                                                                                 | The candidate profile holds a single, unique `committedApplicationId`, set with a conditional update. Committed candidates can't apply elsewhere, and every release is logged and shown to recruiters.                                                                                          |
+| Offer-shopping visibility                                                                                | Active offers = offers the candidate declared as holding or accepted + offers extended through Readyhire, with a count of declared offers whose proof has been verified (`summarizeCandidate`)                                                                                                  |
+| Joining is tracked                                                                                       | An offered application ends as **Joined** or **Did not join**, which also clears the commitment. Recruiters can report ghosting; admins uphold or dismiss reports, and upheld reports appear on the candidate's profile.                                                                        |
+| Documents stay private                                                                                   | Uploads are checked by file content (PDF, PNG, JPG, WebP, up to 5 MB), stored outside `public/`, and served only to their owner and to admins (`src/app/api/documents/[id]/route.ts`)                                                                                                           |
 
 ### Status flows
 
@@ -110,16 +110,16 @@ immediately.
 
 ## Scripts
 
-| Command | What it does |
-| ------- | ------------ |
-| `npm run dev` | Start the dev server on port 3000 |
-| `npm run setup` | Apply migrations, generate the Prisma client and seed demo data |
-| `npm run db:seed` | Reset the database to the demo data |
-| `npm run db:migrate` | Create and apply a migration after changing `schema.prisma` |
-| `npm run db:reset` | Drop the database, re-apply migrations and re-seed |
-| `npm run build` / `npm start` | Production build and server |
-| `npm run lint` / `npm run typecheck` | ESLint and TypeScript checks |
-| `npm run test:e2e` | Playwright end-to-end tests (see below) |
+| Command                              | What it does                                                    |
+| ------------------------------------ | --------------------------------------------------------------- |
+| `npm run dev`                        | Start the dev server on port 3000                               |
+| `npm run setup`                      | Apply migrations, generate the Prisma client and seed demo data |
+| `npm run db:seed`                    | Reset the database to the demo data                             |
+| `npm run db:migrate`                 | Create and apply a migration after changing `schema.prisma`     |
+| `npm run db:reset`                   | Drop the database, re-apply migrations and re-seed              |
+| `npm run build` / `npm start`        | Production build and server                                     |
+| `npm run lint` / `npm run typecheck` | ESLint and TypeScript checks                                    |
+| `npm run test:e2e`                   | Playwright end-to-end tests (see below)                         |
 
 ## End-to-end tests
 

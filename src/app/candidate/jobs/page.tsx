@@ -34,8 +34,15 @@ export default async function JobsPage({ searchParams }: PageProps<"/candidate/j
   };
 
   const [jobs, myApplications] = await Promise.all([
-    db.job.findMany({ where, include: { company: true }, orderBy: { createdAt: "desc" } }),
-    db.application.findMany({ where: { candidateId: profile.id }, select: { jobId: true, status: true } }),
+    db.job.findMany({
+      where,
+      include: { company: true },
+      orderBy: { createdAt: "desc" },
+    }),
+    db.application.findMany({
+      where: { candidateId: profile.id },
+      select: { jobId: true, status: true },
+    }),
   ]);
   const appliedStatus = new Map(myApplications.map((a) => [a.jobId, a.status]));
   const daysToJoin =

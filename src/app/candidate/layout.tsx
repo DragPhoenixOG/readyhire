@@ -18,7 +18,13 @@ export default async function CandidateLayout({ children }: LayoutProps<"/candid
   const banner =
     profile.verificationStatus === "VERIFIED" ? null : (
       <Notice
-        tone={profile.verificationStatus === "REJECTED" ? "red" : profile.verificationStatus === "PENDING" ? "blue" : "amber"}
+        tone={
+          profile.verificationStatus === "REJECTED"
+            ? "red"
+            : profile.verificationStatus === "PENDING"
+              ? "blue"
+              : "amber"
+        }
         title={
           profile.verificationStatus === "PENDING"
             ? "Verification in progress"
@@ -50,7 +56,11 @@ export default async function CandidateLayout({ children }: LayoutProps<"/candid
         { href: "/candidate", label: "Dashboard" },
         { href: "/candidate/verification", label: "Verification" },
         { href: "/candidate/jobs", label: "Jobs" },
-        { href: "/candidate/applications", label: "Applications", count: unconfirmedInterviews },
+        {
+          href: "/candidate/applications",
+          label: "Applications",
+          count: unconfirmedInterviews,
+        },
         { href: "/candidate/offers", label: "My offers" },
         { href: "/candidate/profile", label: "Profile" },
       ]}

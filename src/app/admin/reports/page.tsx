@@ -17,7 +17,9 @@ export default async function GhostingReportsPage() {
     include: {
       reporter: { select: { name: true, email: true } },
       candidate: { include: { user: { select: { name: true } } } },
-      application: { include: { job: { include: { company: true } }, interviews: true } },
+      application: {
+        include: { job: { include: { company: true } }, interviews: true },
+      },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -55,7 +57,10 @@ export default async function GhostingReportsPage() {
                   </p>
                   <p className="whitespace-pre-line text-slate-800">{r.details}</p>
                   <p className="text-xs text-slate-500">
-                    Interviews: {r.application.interviews.map((i) => `${i.round} (${i.status.toLowerCase().replace("_", "-")})`).join(", ") || "none"}
+                    Interviews:{" "}
+                    {r.application.interviews
+                      .map((i) => `${i.round} (${i.status.toLowerCase().replace("_", "-")})`)
+                      .join(", ") || "none"}
                   </p>
                 </div>
                 {r.status === "OPEN" ? (
@@ -63,14 +68,22 @@ export default async function GhostingReportsPage() {
                     <input type="hidden" name="reportId" value={r.id} />
                     <div className="flex gap-4 text-sm">
                       <label className="flex items-center gap-1.5">
-                        <input type="radio" name="decision" value="UPHELD" required className="accent-rose-600" /> Uphold
+                        <input type="radio" name="decision" value="UPHELD" required className="accent-rose-600" />{" "}
+                        Uphold
                       </label>
                       <label className="flex items-center gap-1.5">
                         <input type="radio" name="decision" value="DISMISSED" className="accent-brand-700" /> Dismiss
                       </label>
                     </div>
                     <Field label="Resolution note" htmlFor={`note-${r.id}`}>
-                      <textarea id={`note-${r.id}`} name="note" rows={2} required minLength={MIN_REASON_LENGTH} className={inputClass} />
+                      <textarea
+                        id={`note-${r.id}`}
+                        name="note"
+                        rows={2}
+                        required
+                        minLength={MIN_REASON_LENGTH}
+                        className={inputClass}
+                      />
                     </Field>
                   </ActionForm>
                 ) : (
