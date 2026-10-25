@@ -2,30 +2,48 @@
 
 **Verified candidates. Predictable joining. Built for GCCs and quick hirers.**
 
-Readyhire lists only candidates whose notice period, resignation and current offer letter have been verified. Recruiters
-see when a candidate can actually join, how many active offers they hold and whether they have committed to a role.
-Every application gets an accept or a reject with a reason, and the platform tracks each hire from application to
-joining.
+Readyhire lists only candidates whose notice period, resignation and current offer letter have been verified.
+Recruiters see when a candidate can actually join, how many active offers they hold and whether they've committed to a
+role. Every application gets an accept or a reject with a reason, and the platform tracks each hire from application
+to joining.
 
-This folder is a self-contained MVP with three role-based modules: **Admin**, **Recruiter** and **Candidate**.
+Three modules: **Candidate**, **Recruiter** and **Admin**.
 
-## Quick start
+- **Candidates** upload their offer letter, notice policy and resignation evidence, get verified, apply to jobs,
+  declare competing offers, commit to one role at a time and confirm interviews.
+- **Recruiters** sign up with a company email domain, are approved by an admin, post jobs, see verified talent with
+  notice and offer signals, must accept or reject every application with a reason within 72 hours, schedule
+  interviews (optionally in a Readyhire room), extend offers, record joining outcomes and report ghosting.
+- **Admins** review documents, verify candidates (document review, screen share or in-person), approve recruiters,
+  resolve ghosting reports, flag or restrict users, and track response rates and joining outcomes. Every decision is
+  in the audit log.
 
-Requires Node.js 20.19+, 22.12+ or 24+ (Prisma 7's minimum).
+## Stack
+
+Next.js 16 (App Router, Server Actions) · React 19 · TypeScript · Tailwind CSS 4 · PostgreSQL with Prisma 7 ·
+S3-compatible document storage · Resend or SMTP email · Zod · Vitest and Playwright · GitHub Actions.
+
+The production setup (Vercel + Supabase + AWS S3, all in Mumbai, + Resend) is described step by step in
+**[docs/deployment.md](docs/deployment.md)**. Security design: **[SECURITY.md](SECURITY.md)**.
+
+## Local development
+
+Requires Node.js 22 (see `.nvmrc`) and Docker for Postgres (or any PostgreSQL 15+).
 
 ```bash
-cd readyhire
-cp .env.example .env      # optional: the defaults work for local development
+cp .env.example .env
+docker compose up -d      # PostgreSQL on localhost:5432
 npm install
-npm run setup             # creates the SQLite database and loads demo data
-npm run dev
+npm run setup             # apply migrations, generate the Prisma client, load demo data
+npm run dev               # http://localhost:3000
 ```
 
-Open <http://localhost:3000>. The sign-in page lists the demo accounts.
+In development, documents are stored in `./storage` and emails are printed to the terminal (look for `[email]`), so
+nothing external is needed. Email confirmation and password-reset links appear there too.
 
 ### Demo accounts
 
-Every seeded account uses the password **`Readyhire@123`**.
+Every seeded account uses the password **`Readyhire@123`**. The sign-in page lists them in development.
 
 | Role                                  | Email                       |
 | ------------------------------------- | --------------------------- |
@@ -40,33 +58,31 @@ Every seeded account uses the password **`Readyhire@123`**.
 | Candidate, brand new                  | `neha.gupta@example.com`    |
 | Candidate, restricted (can't sign in) | `sameer.khan@example.com`   |
 
-Seed dates are relative to when you run the seed, so there are always upcoming interviews, fresh applications and
-one overdue reply. Run `npm run db:seed` at any time to reset the demo data.
+Seed dates are relative to when you run the seed, so there are always upcoming interviews, fresh applications and one
+overdue reply. `npm run db:seed` resets everything (it refuses to run against production).
 
 ### A five-minute walkthrough
 
-1. **Candidate:** sign in as Neha. Fill in your profile and notice details, upload the three documents (any PDF or
-   image), then submit them for verification. Jobs show "Verification required" until you're verified.
-2. **Admin:** open **Verifications → Neha Gupta**. Preview and verify each document, then approve with a verification
-   method (document review, screen share or in-person check) and internal notes.
-3. **Candidate:** apply to a job. The application page shows when the recruiter's reply is due.
-4. **Recruiter:** sign in as Priya and open **Applications**. Accept with a message or reject with a reason, schedule
-   an interview (optionally in a Readyhire room), extend an offer and record whether the candidate joined.
-5. **Candidate:** commit to the accepted role. Applying elsewhere is blocked until you release the commitment.
-6. **Recruiter:** sign in as Arjun. An overdue reply pauses job posting until he responds.
+1. **Candidate** (Neha): fill in the profile and notice details, upload the three documents, submit for verification.
+2. **Admin**: Verifications → Neha → preview and verify each document → approve with a verification method.
+3. **Candidate**: apply to a job; the application shows when the recruiter's reply is due.
+4. **Recruiter** (Priya): Applications → accept with a message or reject with a reason → schedule an interview →
+   extend an offer → record whether the candidate joined.
+5. **Candidate**: commit to the accepted role; applying elsewhere is blocked until the commitment is released.
+6. **Recruiter** (Arjun): an overdue reply pauses job posting until he responds.
 
 ## Core rules and where they're enforced
 
-| Rule                                                                                                     | Enforcement                                                                                                                                                                                                                                                                                     |
-| -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Candidates are listed only after their offer letter, notice policy and resignation evidence are verified | `approveCandidate` requires all three documents to be verified, and the verified-talent list and job applications are limited to verified candidates (`src/actions/admin.ts`, `src/lib/candidate.ts`, `applyToJob`)                                                                             |
-| Verified details can't be changed silently                                                               | Notice details, documents and current company lock while verification is pending or done. Changing them means reopening verification, which hides the profile from recruiters.                                                                                                                  |
-| Recruiters sign up with a company domain                                                                 | Personal and disposable mailboxes are blocked, and the email domain must match the company website (`src/lib/domain.ts`). Admins also approve each recruiter.                                                                                                                                   |
-| Recruiters respond to every application                                                                  | Accepting needs a message and rejecting needs a category plus an explanation of at least 15 characters. Replies are due within 72 hours. While any reply is overdue the recruiter can't post jobs, and a job can't be closed while applications are still waiting (`src/actions/recruiter.ts`). |
-| One commitment at a time                                                                                 | The candidate profile holds a single, unique `committedApplicationId`, set with a conditional update. Committed candidates can't apply elsewhere, and every release is logged and shown to recruiters.                                                                                          |
-| Offer-shopping visibility                                                                                | Active offers = offers the candidate declared as holding or accepted + offers extended through Readyhire, with a count of declared offers whose proof has been verified (`summarizeCandidate`)                                                                                                  |
-| Joining is tracked                                                                                       | An offered application ends as **Joined** or **Did not join**, which also clears the commitment. Recruiters can report ghosting; admins uphold or dismiss reports, and upheld reports appear on the candidate's profile.                                                                        |
-| Documents stay private                                                                                   | Uploads are checked by file content (PDF, PNG, JPG, WebP, up to 5 MB), stored outside `public/`, and served only to their owner and to admins (`src/app/api/documents/[id]/route.ts`)                                                                                                           |
+| Rule                                   | Enforcement                                                                                                                                                                                                                                               |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Only verified candidates are listed    | `approveCandidate` (`src/actions/admin.ts`) requires all three documents verified; the talent pool and `applyToJob` admit only verified candidates (`src/lib/candidate.ts`).                                                                              |
+| Verified details can't change silently | Notice details, documents and current company lock while verification is pending or done; changing them means reopening verification, which hides the profile.                                                                                            |
+| Recruiters use a company domain        | Personal and disposable mailboxes are blocked, the domain must match the company website (`src/lib/domain.ts`), the inbox must be confirmed, and an admin approves the account.                                                                           |
+| Every application gets a response      | Accepting needs a message; rejecting needs a category plus a 15+ character explanation. Replies are due in 72 hours, reminders go out 24 hours before, and overdue recruiters can't post jobs (`src/actions/recruiter.ts`, `src/app/api/cron/reminders`). |
+| One commitment at a time               | A single unique `committedApplicationId` per candidate, set with a conditional update; committed candidates can't apply elsewhere; releases are logged and shown to recruiters.                                                                           |
+| Offer-shopping visibility              | Active offers = declared offers still held or accepted + offers extended on Readyhire, with how many are backed by verified proof (`summarizeCandidate`).                                                                                                 |
+| Joining is tracked                     | Offered applications end as Joined or Did not join; recruiters can report ghosting; upheld reports appear on the candidate's profile.                                                                                                                     |
+| Documents stay private                 | Direct-to-bucket uploads with pre-signed URLs, content (magic-byte) checks, and 60-second signed download links for the owner and admins only (`src/actions/documents.ts`, `src/lib/storage`).                                                            |
 
 ### Status flows
 
@@ -77,70 +93,60 @@ Verification:  NOT_SUBMITTED → PENDING → VERIFIED
 
 Application:   APPLIED ─┬→ ACCEPTED → INTERVIEWING → OFFERED ─┬→ JOINED
                         │                                     └→ NOT_JOINED
-                        └→ REJECTED   (recruiter may also reject at any open stage, with a reason)
+                        └→ REJECTED   (recruiter may reject at any open stage, with a reason)
                Any open stage → WITHDRAWN (candidate, with a reason)
 ```
 
 ## Project layout
 
 ```
-readyhire/
-├── prisma/
-│   ├── schema.prisma        # data model
-│   ├── migrations/
-│   └── seed.ts              # demo data (wipes and recreates everything)
+├── prisma/                 # schema, migrations, demo seed
+├── scripts/                # create-admin, Vercel build (with migrations), script helpers
 ├── src/
-│   ├── actions/             # Server Actions per role: auth, candidate, recruiter, admin
+│   ├── actions/            # Server Actions: auth, candidate, documents, recruiter, admin
 │   ├── app/
-│   │   ├── (public)/        # landing, login, sign-up, terms
-│   │   ├── candidate/       # candidate dashboard, verification, jobs, applications, offers, profile
-│   │   ├── recruiter/       # recruiter dashboard, applications, jobs, verified talent
-│   │   ├── admin/           # admin dashboard, verifications, recruiters, applications, reports, users
-│   │   └── api/documents/   # authenticated document downloads
-│   ├── components/          # UI primitives, status badges, candidate signals, forms
-│   ├── lib/                 # auth/session, db client, uploads, validation, domain rules
-│   └── proxy.ts             # role-based route protection (Next.js 16 "proxy", formerly middleware)
-└── e2e/                     # Playwright tests for the core flows
+│   │   ├── (public)/       # landing, sign-in/up, email verification, password reset, terms, privacy
+│   │   ├── candidate/      # dashboard, verification, jobs, applications, offers, profile, account
+│   │   ├── recruiter/      # dashboard, applications, jobs, verified talent, account
+│   │   ├── admin/          # dashboard, verifications, recruiters, applications, reports, users, audit log
+│   │   └── api/            # health, cron reminders, document links, local storage stand-in
+│   ├── components/         # UI primitives, forms, uploader, trust-signal panels
+│   ├── lib/                # env, auth/session, db, storage, email, rate limiting, rules and formatting
+│   └── proxy.ts            # route protection + security headers (Next.js 16 "proxy", formerly middleware)
+├── e2e/                    # Playwright end-to-end tests
+├── docs/deployment.md      # production setup
+├── Dockerfile              # image for non-Vercel hosts
+└── vercel.json             # Mumbai region + hourly reminder cron
 ```
-
-The stack is Next.js 16 (App Router, Server Actions), React 19, Prisma 7 with SQLite (via `better-sqlite3`),
-Tailwind CSS 4 and Zod. Authentication is email and password: bcrypt hashes and a signed, HTTP-only JWT cookie
-(`jose`). Every page and Server Action re-reads the user from the database, so restricting a user takes effect
-immediately.
 
 ## Scripts
 
-| Command                              | What it does                                                    |
-| ------------------------------------ | --------------------------------------------------------------- |
-| `npm run dev`                        | Start the dev server on port 3000                               |
-| `npm run setup`                      | Apply migrations, generate the Prisma client and seed demo data |
-| `npm run db:seed`                    | Reset the database to the demo data                             |
-| `npm run db:migrate`                 | Create and apply a migration after changing `schema.prisma`     |
-| `npm run db:reset`                   | Drop the database, re-apply migrations and re-seed              |
-| `npm run build` / `npm start`        | Production build and server                                     |
-| `npm run lint` / `npm run typecheck` | ESLint and TypeScript checks                                    |
-| `npm run test:e2e`                   | Playwright end-to-end tests (see below)                         |
+| Command                                                 | What it does                                                   |
+| ------------------------------------------------------- | -------------------------------------------------------------- |
+| `npm run dev`                                           | Dev server on port 3000                                        |
+| `npm run setup`                                         | Apply migrations, generate the Prisma client, load demo data   |
+| `npm run db:migrate -- --name <change>`                 | Create and apply a migration after editing the schema          |
+| `npm run db:seed` · `npm run db:reset`                  | Reset demo data · drop, re-migrate and re-seed (never in prod) |
+| `npm run db:deploy`                                     | Apply pending migrations (production)                          |
+| `npm run create-admin -- --email … --name …`            | Create an admin account (any environment)                      |
+| `npm run lint` · `npm run typecheck` · `npm run format` | Code quality                                                   |
+| `npm test`                                              | Unit tests (Vitest)                                            |
+| `npm run test:e2e`                                      | End-to-end tests (Playwright) against a production build       |
+| `npm run build` · `npm start`                           | Production build and server                                    |
 
-## End-to-end tests
+## Tests
 
 ```bash
+npm test                          # unit tests for the business rules
 npx playwright install chromium   # first time only
 npm run test:e2e
 ```
 
-The tests start their own dev server on port 3200 with a separate database (`prisma/e2e.db`) and upload folder, and
-re-seed them on each run, so your development data is untouched. Stop `npm run dev` first, because Next.js allows only
-one dev server per project folder. The tests cover the company-domain check, verification gating, the mandatory reply
-with a reason, single-role commitment, pausing job posts for overdue replies, and document access control.
+The end-to-end suite builds the app and runs it against its own database (`readyhire_e2e` on the local Postgres,
+created automatically; override with `E2E_DATABASE_URL`), local storage and a file-based email outbox, so it can follow
+confirmation and reset links. It covers the company-domain check, email verification, password reset, verification
+gating, upload content checks, the mandatory reply with a reason, single-role commitment, overdue reminders, document
+access control and the security headers.
 
-## Configuration
-
-See `.env.example`. In production, set `AUTH_SECRET` and serve the app over HTTPS: session cookies are marked
-`Secure` when `NODE_ENV=production`.
-
-## Not in this MVP
-
-- Email or WhatsApp notifications (responses, interview reminders, overdue reminders)
-- Scheduling for field teams' in-person checks and Readyhire rooms (rooms are a fixed list today)
-- Structured screen-share evidence (today it's the admin's internal notes)
-- Object storage for documents and a hosted database (SQLite and local disk are fine for a pilot)
+CI (`.github/workflows/ci.yml`) runs formatting, lint, type checks, unit tests and the build; a migration drift check
+and the end-to-end suite against Postgres; and a Docker image build.
