@@ -24,7 +24,11 @@ export default async function CandidateDashboard() {
     }),
     db.application.findMany({
       where: { candidateId: profile.id },
-      include: { job: { include: { company: true } } },
+      include: {
+        job: { include: { company: true } },
+        // The offer message, when there is one, is the recruiter's latest word.
+        events: { where: { type: "OFFERED" }, orderBy: { createdAt: "desc" }, take: 1 },
+      },
       orderBy: { updatedAt: "desc" },
     }),
     db.offer.count({
@@ -157,7 +161,7 @@ export default async function CandidateDashboard() {
                       <ApplicationStatusBadge status={a.status} />
                     </div>
                     <p className="mt-0.5 line-clamp-2 text-sm text-slate-600">
-                      {a.status === "REJECTED" ? a.rejectionReason : a.responseMessage}
+                      {a.status === "REJECTED" ? a.rejectionReason : (a.events[0]?.message ?? a.responseMessage)}
                     </p>
                   </Link>
                 </li>

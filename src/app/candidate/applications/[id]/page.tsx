@@ -45,6 +45,10 @@ export default async function CandidateApplicationPage({ params }: PageProps<"/c
   const canCommit = COMMITTABLE_STATUSES.includes(application.status) && !profile.committedApplicationId;
   const isOpen = OPEN_APPLICATION_STATUSES.includes(application.status);
   const due = responseDueAt(application.createdAt);
+  // Once an offer is out, it is the recruiter's latest word (events are newest first).
+  const latestOffer = ["OFFERED", "JOINED", "NOT_JOINED"].includes(application.status)
+    ? application.events.find((e) => e.type === "OFFERED")
+    : undefined;
 
   return (
     <>
@@ -76,6 +80,13 @@ export default async function CandidateApplicationPage({ params }: PageProps<"/c
             ) : application.status === "WITHDRAWN" ? (
               <Notice tone="neutral" title="You withdrew this application">
                 {application.withdrawnReason}
+              </Notice>
+            ) : latestOffer ? (
+              <Notice tone="green" title={`Offer extended ${formatDate(latestOffer.createdAt)}`}>
+                <p className="whitespace-pre-line">
+                  {latestOffer.message ??
+                    `${formatLpa(application.offerCtcLpa) ?? "CTC shared separately"} · joining ${formatDate(application.offerJoiningDate)}`}
+                </p>
               </Notice>
             ) : (
               <Notice tone="green" title={`Accepted ${formatDate(application.respondedAt)}`}>
