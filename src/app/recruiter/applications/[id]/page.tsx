@@ -12,6 +12,7 @@ import {
 import { ActionForm } from "@/components/action-form";
 import { CandidateSignals } from "@/components/candidate-signals";
 import { InterviewList } from "@/components/interview-list";
+import { ResumeLink } from "@/components/resume-link";
 import { ApplicationStatusBadge, ReportStatusBadge } from "@/components/status";
 import { Timeline } from "@/components/timeline";
 import { Disclosure } from "@/components/disclosure";
@@ -40,7 +41,7 @@ export default async function RecruiterApplicationPage({ params }: PageProps<"/r
     where: { id, job: { recruiterId: recruiter.id } },
     include: {
       job: true,
-      candidate: { include: candidateSummaryInclude },
+      candidate: { include: { ...candidateSummaryInclude, resume: true } },
       interviews: { orderBy: { scheduledAt: "asc" } },
       events: {
         include: { actor: { select: { name: true, role: true } } },
@@ -396,6 +397,9 @@ export default async function RecruiterApplicationPage({ params }: PageProps<"/r
                   .map((s) => s.trim())
                   .filter(Boolean)}
               />
+              <p>
+                <span className="font-medium text-slate-700">Resume:</span> <ResumeLink resume={candidate.resume} />
+              </p>
               {status !== "APPLIED" && status !== "REJECTED" ? (
                 <div className="rounded-lg bg-slate-50 px-3 py-2">
                   <p className="text-xs font-medium tracking-wide text-slate-500 uppercase">Contact</p>

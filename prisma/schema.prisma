@@ -253,6 +253,7 @@ model CandidateProfile {
   updatedAt DateTime @updatedAt
 
   documents       Document[]
+  resume          Resume?
   offers          Offer[]
   applications    Application[]
   ghostingReports GhostingReport[]
@@ -281,6 +282,18 @@ model Document {
   offer Offer?
 
   @@index([candidateId, type])
+}
+
+/// The candidate's current resume. Not part of verification: it can be replaced or removed at any time.
+model Resume {
+  id          String           @id @default(cuid())
+  candidateId String           @unique
+  candidate   CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  fileName    String // original file name
+  storageKey  String           @unique // object key in the document store
+  mimeType    String
+  sizeBytes   Int
+  uploadedAt  DateTime         @default(now())
 }
 
 model Offer {

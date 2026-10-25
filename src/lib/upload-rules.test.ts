@@ -15,6 +15,12 @@ describe("uploadProblem", () => {
     expect(uploadProblem("application/pdf", 0)).toMatch(/empty/);
     expect(uploadProblem("application/pdf", MAX_UPLOAD_BYTES + 1)).toMatch(/5 MB/);
   });
+
+  it("accepts only PDF resumes", () => {
+    expect(uploadProblem("application/pdf", 1000, "resume")).toBeNull();
+    expect(uploadProblem("image/png", 1000, "resume")).toMatch(/resume as a PDF/);
+    expect(uploadProblem("application/pdf", MAX_UPLOAD_BYTES + 1, "resume")).toMatch(/5 MB/);
+  });
 });
 
 describe("matchesSignature", () => {

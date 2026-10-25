@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CandidateSignals } from "@/components/candidate-signals";
+import { ResumeLink } from "@/components/resume-link";
 import { ApplicationStatusBadge } from "@/components/status";
 import { Card, Chips, DescriptionList, PageHeader } from "@/components/ui";
 import { requireApprovedRecruiter } from "@/lib/auth";
@@ -21,7 +22,7 @@ export default async function RecruiterCandidatePage({ params }: PageProps<"/rec
       id,
       OR: [listableCandidateWhere, { applications: { some: { job: { recruiterId: recruiter.id } } } }],
     },
-    include: candidateSummaryInclude,
+    include: { ...candidateSummaryInclude, resume: true },
   });
   if (!candidate) notFound();
 
@@ -57,6 +58,8 @@ export default async function RecruiterCandidatePage({ params }: PageProps<"/rec
                   label: "On Readyhire since",
                   value: formatDate(candidate.createdAt),
                 },
+                // Resumes carry contact details, so they're shared only with recruiters the candidate applied to.
+                ...(withMe.length > 0 ? [{ label: "Resume", value: <ResumeLink resume={candidate.resume} /> }] : []),
               ]}
             />
             <div className="mt-4">
