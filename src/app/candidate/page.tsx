@@ -105,68 +105,6 @@ export default async function CandidateDashboard() {
         />
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        <Card
-          className="lg:col-span-2"
-          title="Verification"
-          description="Recruiters only see verified candidates."
-          actions={<VerificationBadge status={profile.verificationStatus} />}
-        >
-          <ol className="grid gap-2 sm:grid-cols-2">
-            {steps.map((s) => (
-              <li key={s.label} className="flex items-center gap-2 text-sm">
-                <span
-                  className={cx(
-                    "grid h-5 w-5 shrink-0 place-items-center rounded-full",
-                    s.done ? "bg-emerald-600 text-white" : "border border-slate-300 bg-white",
-                  )}
-                >
-                  {s.done && <CheckIcon className="h-3 w-3" />}
-                </span>
-                <span className={s.done ? "text-slate-900" : "text-slate-500"}>{s.label}</span>
-                {"note" in s && s.note && (
-                  <span className={cx("text-xs", s.note === "rejected" ? "text-rose-600" : "text-emerald-700")}>
-                    ({s.note})
-                  </span>
-                )}
-              </li>
-            ))}
-          </ol>
-          {profile.verificationStatus === "VERIFIED" && profile.lastWorkingDay ? (
-            <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
-              Verified notice: {profile.noticePeriodDays} days · last working day {formatDate(profile.lastWorkingDay)}
-              {daysFromToday(profile.lastWorkingDay) > 0
-                ? ` (in ${daysFromToday(profile.lastWorkingDay)} days)`
-                : " (notice served)"}
-            </p>
-          ) : (
-            <Link href="/candidate/verification" className={cx(buttonClass("primary", "sm"), "mt-4")}>
-              Continue verification
-            </Link>
-          )}
-        </Card>
-
-        <Card title="Commitment" description="You can commit to one role at a time.">
-          {committed ? (
-            <div className="space-y-2 text-sm">
-              <p className="font-medium text-slate-900">{committed.job.title}</p>
-              <p className="text-slate-600">{committed.job.company.name}</p>
-              <p className="text-xs text-slate-500">
-                Committed {profile.committedAt ? timeAgo(profile.committedAt) : ""}
-              </p>
-              <Link href={`/candidate/applications/${committed.id}`} className={buttonClass("secondary", "sm")}>
-                View application
-              </Link>
-            </div>
-          ) : (
-            <p className="text-sm text-slate-600">
-              You haven&apos;t committed to a role. Once a recruiter accepts your application you can commit to it from
-              the application page.
-            </p>
-          )}
-        </Card>
-      </div>
-
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <Card title="Upcoming interviews">
           {interviews.length === 0 ? (
@@ -225,6 +163,68 @@ export default async function CandidateDashboard() {
                 </li>
               ))}
             </ul>
+          )}
+        </Card>
+      </div>
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+        <Card
+          className="lg:col-span-2"
+          title="Verification"
+          description="Recruiters only see verified candidates."
+          actions={<VerificationBadge status={profile.verificationStatus} />}
+        >
+          <ol className="grid gap-2 sm:grid-cols-2">
+            {steps.map((s) => (
+              <li key={s.label} className="flex items-center gap-2 text-sm">
+                <span
+                  className={cx(
+                    "grid h-5 w-5 shrink-0 place-items-center rounded-full",
+                    s.done ? "bg-emerald-600 text-white" : "border border-slate-300 bg-white",
+                  )}
+                >
+                  {s.done && <CheckIcon className="h-3 w-3" />}
+                </span>
+                <span className={s.done ? "text-slate-900" : "text-slate-500"}>{s.label}</span>
+                {"note" in s && s.note && (
+                  <span className={cx("text-xs", s.note === "rejected" ? "text-rose-600" : "text-emerald-700")}>
+                    ({s.note})
+                  </span>
+                )}
+              </li>
+            ))}
+          </ol>
+          {profile.verificationStatus === "VERIFIED" && profile.lastWorkingDay ? (
+            <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+              Verified notice: {profile.noticePeriodDays} days · last working day {formatDate(profile.lastWorkingDay)}
+              {daysFromToday(profile.lastWorkingDay) > 0
+                ? ` (in ${daysFromToday(profile.lastWorkingDay)} days)`
+                : " (notice served)"}
+            </p>
+          ) : (
+            <Link href="/candidate/verification" className={cx(buttonClass("primary", "sm"), "mt-4")}>
+              Continue verification
+            </Link>
+          )}
+        </Card>
+
+        <Card title="Commitment" description="You can commit to one role at a time.">
+          {committed ? (
+            <div className="space-y-2 text-sm">
+              <p className="font-medium text-slate-900">{committed.job.title}</p>
+              <p className="text-slate-600">{committed.job.company.name}</p>
+              <p className="text-xs text-slate-500">
+                Committed {profile.committedAt ? timeAgo(profile.committedAt) : ""}
+              </p>
+              <Link href={`/candidate/applications/${committed.id}`} className={buttonClass("secondary", "sm")}>
+                View application
+              </Link>
+            </div>
+          ) : (
+            <p className="text-sm text-slate-600">
+              You haven&apos;t committed to a role. Once a recruiter accepts your application you can commit to it from
+              the application page.
+            </p>
           )}
         </Card>
       </div>
