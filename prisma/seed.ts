@@ -75,7 +75,10 @@ function makePdf(title: string, lines: string[]) {
 }
 
 async function wipe() {
-  const files = await db.document.findMany({ select: { storageKey: true } });
+  const files = [
+    ...(await db.document.findMany({ select: { storageKey: true } })),
+    ...(await db.resume.findMany({ select: { storageKey: true } })),
+  ];
   await Promise.all(files.map((f) => store.remove(f.storageKey)));
   // Break the candidate <-> application commitment cycle before deleting.
   await db.candidateProfile.updateMany({
@@ -87,6 +90,7 @@ async function wipe() {
   await db.application.deleteMany();
   await db.offer.deleteMany();
   await db.document.deleteMany();
+  await db.resume.deleteMany();
   await db.job.deleteMany();
   await db.candidateProfile.deleteMany();
   await db.recruiterProfile.deleteMany();
@@ -444,6 +448,26 @@ async function main() {
     ][]) {
       const t = docText[type];
       await storeDoc(profile.id, type, t.file, t.title, t.lines, docSpec, new Date(signedUp.getTime() + HOUR));
+    }
+    if (spec.headline) {
+      const bytes = makePdf(`${spec.name} - Resume`, [
+        spec.headline,
+        `${spec.title ?? "-"} at ${company} · ${spec.experience ?? "-"} years`,
+        `Skills: ${spec.skills ?? "-"}`,
+        `${spec.email} · ${spec.phone} · ${spec.city}`,
+      ]);
+      const storageKey = `candidates/${profile.id}/${randomUUID()}.pdf`;
+      await store.put(storageKey, bytes, "application/pdf");
+      await db.resume.create({
+        data: {
+          candidateId: profile.id,
+          fileName: `${spec.name.toLowerCase().replace(/[^a-z]+/g, "-")}-resume.pdf`,
+          storageKey,
+          mimeType: "application/pdf",
+          sizeBytes: bytes.length,
+          uploadedAt: new Date(signedUp.getTime() + HOUR),
+        },
+      });
     }
     for (const offer of spec.offers ?? []) {
       const proof = offer.proof
@@ -1155,6 +1179,7 @@ async function main() {
     jobs: await db.job.count(),
     applications: await db.application.count(),
     documents: await db.document.count(),
+    resumes: await db.resume.count(),
   };
   console.log(`Seeded Readyhire demo data: ${JSON.stringify(counts)}. Password for every account: ${PASSWORD}`);
 }

@@ -9,8 +9,8 @@ to joining.
 
 Three modules: **Candidate**, **Recruiter** and **Admin**.
 
-- **Candidates** upload their offer letter, notice policy and resignation evidence, get verified, apply to jobs,
-  declare competing offers, commit to one role at a time and confirm interviews.
+- **Candidates** upload their offer letter, notice policy and resignation evidence, get verified, add an optional PDF
+  resume, apply to jobs, declare competing offers, commit to one role at a time and confirm interviews.
 - **Recruiters** sign up with a company email domain, are approved by an admin, post jobs, see verified talent with
   notice and offer signals, must accept or reject every application with a reason within 72 hours, schedule
   interviews (optionally in a Readyhire room), extend offers, record joining outcomes and report ghosting.
@@ -83,6 +83,7 @@ overdue reply. `npm run db:seed` resets everything (it refuses to run against pr
 | Offer-shopping visibility              | Active offers = declared offers still held or accepted + offers extended on Readyhire, with how many are backed by verified proof (`summarizeCandidate`).                                                                                                 |
 | Joining is tracked                     | Offered applications end as Joined or Did not join; recruiters can report ghosting; upheld reports appear on the candidate's profile.                                                                                                                     |
 | Documents stay private                 | Direct-to-bucket uploads with pre-signed URLs, content (magic-byte) checks, and 60-second signed download links for the owner and admins only (`src/actions/documents.ts`, `src/lib/storage`).                                                            |
+| Resumes reach only chosen recruiters   | The optional PDF resume isn't in the talent pool; besides the candidate and admins, only approved recruiters whose jobs the candidate applied to can open it (`src/app/api/resumes/[id]/route.ts`).                                                       |
 
 ### Status flows
 
@@ -146,7 +147,7 @@ The end-to-end suite builds the app and runs it against its own database (`ready
 created automatically; override with `E2E_DATABASE_URL`), local storage and a file-based email outbox, so it can follow
 confirmation and reset links. It covers the company-domain check, email verification, password reset, verification
 gating, upload content checks, the mandatory reply with a reason, single-role commitment, overdue reminders, document
-access control and the security headers.
+and resume access control and the security headers.
 
 CI (`.github/workflows/ci.yml`) runs formatting, lint, type checks, unit tests and the build; a migration drift check
 and the end-to-end suite against Postgres; and a Docker image build.

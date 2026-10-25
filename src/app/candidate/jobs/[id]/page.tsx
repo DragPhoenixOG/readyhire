@@ -17,7 +17,7 @@ export const metadata: Metadata = { title: "Job" };
 export default async function CandidateJobPage({ params }: PageProps<"/candidate/jobs/[id]">) {
   const { id } = await params;
   const { profile } = await requireCandidate();
-  const [job, application, joined] = await Promise.all([
+  const [job, application, joined, resume] = await Promise.all([
     db.job.findFirst({
       where: { id, ...visibleJobWhere },
       include: { company: true },
@@ -28,6 +28,7 @@ export default async function CandidateJobPage({ params }: PageProps<"/candidate
     db.application.findFirst({
       where: { candidateId: profile.id, status: "JOINED" },
     }),
+    db.resume.findUnique({ where: { candidateId: profile.id }, select: { id: true } }),
   ]);
   // Candidates can still open a job they applied to after it closes.
   const closedJob = !job && application ? await db.job.findUnique({ where: { id }, include: { company: true } }) : null;
@@ -104,6 +105,19 @@ export default async function CandidateJobPage({ params }: PageProps<"/candidate
                     {daysToJoin} days.
                   </Notice>
                 )}
+                <p className="text-sm text-slate-600">
+                  {resume ? (
+                    "Your resume is shared with this recruiter when you apply."
+                  ) : (
+                    <>
+                      No resume on your profile.{" "}
+                      <Link href="/candidate/profile" className="font-medium text-brand-700 hover:underline">
+                        Add one
+                      </Link>{" "}
+                      so the recruiter sees your full background.
+                    </>
+                  )}
+                </p>
                 <Field label="Note to the recruiter (optional)" htmlFor="coverNote">
                   <textarea id="coverNote" name="coverNote" rows={4} maxLength={1000} className={inputClass} />
                 </Field>

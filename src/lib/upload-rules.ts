@@ -9,10 +9,24 @@ export const ALLOWED_UPLOAD_TYPES: Record<string, string> = {
   "image/webp": "webp",
 };
 
-export const UPLOAD_ACCEPT = Object.keys(ALLOWED_UPLOAD_TYPES).join(",");
+/** Resumes are shared with recruiters, so they're PDF only: one format that opens the same everywhere. */
+export const RESUME_UPLOAD_TYPES: Record<string, string> = {
+  "application/pdf": "pdf",
+};
 
-export function uploadProblem(contentType: string, size: number): string | null {
-  if (!(contentType in ALLOWED_UPLOAD_TYPES)) return "Upload a PDF, PNG, JPG or WebP file.";
+export type UploadKind = "document" | "resume";
+
+export function allowedUploadTypes(kind: UploadKind = "document") {
+  return kind === "resume" ? RESUME_UPLOAD_TYPES : ALLOWED_UPLOAD_TYPES;
+}
+
+export function uploadAccept(kind: UploadKind = "document") {
+  return Object.keys(allowedUploadTypes(kind)).join(",");
+}
+
+export function uploadProblem(contentType: string, size: number, kind: UploadKind = "document"): string | null {
+  if (!(contentType in allowedUploadTypes(kind)))
+    return kind === "resume" ? "Upload your resume as a PDF." : "Upload a PDF, PNG, JPG or WebP file.";
   if (size <= 0) return "That file is empty.";
   if (size > MAX_UPLOAD_BYTES) return "Files must be 5 MB or smaller.";
   return null;

@@ -1,15 +1,20 @@
 import type { Metadata } from "next";
 import { updateProfile } from "@/actions/candidate";
+import { removeResume } from "@/actions/documents";
 import { ActionForm } from "@/components/action-form";
+import { DocumentUploader } from "@/components/document-uploader";
+import { ResumeLink } from "@/components/resume-link";
 import { Card, Field, PageHeader, inputClass } from "@/components/ui";
 import { requireCandidate } from "@/lib/auth";
 import { CITIES } from "@/lib/constants";
+import { db } from "@/lib/db";
 
 export const metadata: Metadata = { title: "Profile" };
 
 export default async function CandidateProfilePage() {
   const { user, profile } = await requireCandidate();
   const companyLocked = profile.verificationStatus === "PENDING" || profile.verificationStatus === "VERIFIED";
+  const resume = await db.resume.findUnique({ where: { candidateId: profile.id } });
 
   return (
     <>
@@ -85,6 +90,32 @@ export default async function CandidateProfilePage() {
             </Field>
           </div>
         </ActionForm>
+      </Card>
+      <Card
+        title="Resume"
+        description="Optional, PDF up to 5 MB. Recruiters can open it once you apply to one of their jobs, including any contact details in it. It isn't shown in the talent pool."
+        className="mt-6 max-w-3xl"
+      >
+        <div className="grid gap-4 md:grid-cols-[1fr_minmax(0,20rem)]">
+          <div className="min-w-0 space-y-3">
+            <ResumeLink resume={resume} />
+            {resume && (
+              <ActionForm
+                action={removeResume}
+                submitLabel="Remove resume"
+                variant="ghost"
+                size="sm"
+                confirm="Remove your resume? Recruiters you've applied to will no longer be able to open it."
+              />
+            )}
+          </div>
+          <DocumentUploader
+            target={{ kind: "resume" }}
+            label="Resume file"
+            submitLabel={resume ? "Replace resume" : "Upload resume"}
+            variant={resume ? "secondary" : "primary"}
+          />
+        </div>
       </Card>
     </>
   );

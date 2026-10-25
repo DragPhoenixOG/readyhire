@@ -5,7 +5,7 @@ import { type FormEvent, useRef, useState } from "react";
 import { type UploadTargetInput, completeDocumentUpload, prepareDocumentUpload } from "@/actions/documents";
 import { buttonClass, cx, fileInputClass } from "@/components/ui";
 import type { UploadTarget } from "@/lib/storage/types";
-import { UPLOAD_ACCEPT, uploadProblem } from "@/lib/upload-rules";
+import { uploadAccept, uploadProblem } from "@/lib/upload-rules";
 
 type State =
   | { status: "idle" }
@@ -42,12 +42,13 @@ export function DocumentUploader({
   const inputRef = useRef<HTMLInputElement>(null);
   const [state, setState] = useState<State>({ status: "idle" });
   const busy = state.status === "uploading";
+  const kind = target.kind === "resume" ? "resume" : "document";
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const file = inputRef.current?.files?.[0];
     if (!file) return setState({ status: "error", message: "Choose a file to upload." });
-    const problem = uploadProblem(file.type, file.size);
+    const problem = uploadProblem(file.type, file.size, kind);
     if (problem) return setState({ status: "error", message: problem });
 
     setState({ status: "uploading", progress: 0 });
@@ -88,7 +89,7 @@ export function DocumentUploader({
         type="file"
         name="file"
         required
-        accept={UPLOAD_ACCEPT}
+        accept={uploadAccept(kind)}
         aria-label={label}
         disabled={busy}
         className={fileInputClass}

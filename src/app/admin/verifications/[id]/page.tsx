@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { approveCandidate, rejectCandidate, reviewDocument } from "@/actions/admin";
 import { ActionForm } from "@/components/action-form";
 import { CandidateSignals } from "@/components/candidate-signals";
+import { ResumeLink } from "@/components/resume-link";
 import { DocumentStatusBadge, OfferStatusBadge, VerificationBadge } from "@/components/status";
 import { Disclosure } from "@/components/disclosure";
 import { Badge, Card, DescriptionList, Field, Notice, PageHeader, inputClass } from "@/components/ui";
@@ -33,6 +34,7 @@ export default async function ReviewCandidatePage({ params }: PageProps<"/admin/
     include: {
       ...candidateSummaryInclude,
       verifiedBy: { select: { name: true } },
+      resume: true,
       documents: {
         include: { reviewedBy: { select: { name: true } } },
         orderBy: { uploadedAt: "desc" },
@@ -109,6 +111,7 @@ export default async function ReviewCandidatePage({ params }: PageProps<"/admin/
                     </>
                   ),
                 },
+                { label: "Resume", value: <ResumeLink resume={candidate.resume} /> },
               ]}
             />
           </Card>
