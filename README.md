@@ -150,3 +150,5 @@ access control and the security headers.
 
 CI (`.github/workflows/ci.yml`) runs formatting, lint, type checks, unit tests and the build; a migration drift check
 and the end-to-end suite against Postgres; and a Docker image build.
+
+--Team ReadyHire
