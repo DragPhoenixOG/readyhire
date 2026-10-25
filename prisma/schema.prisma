@@ -1,0 +1,354 @@
+// Readyhire data model.
+// Run `npm run db:reset` after changing this file to re-create and re-seed the dev database.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ───────────────────────────── Enums ─────────────────────────────
+
+enum Role {
+  ADMIN
+  RECRUITER
+  CANDIDATE
+}
+
+enum AccountStatus {
+  ACTIVE
+  RESTRICTED
+}
+
+enum VerificationStatus {
+  NOT_SUBMITTED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum VerificationMethod {
+  DOCUMENT_REVIEW
+  SCREEN_SHARE
+  IN_PERSON
+}
+
+enum DocumentType {
+  OFFER_LETTER
+  NOTICE_POLICY
+  RESIGNATION_PROOF
+  OTHER_OFFER
+}
+
+enum DocumentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum OfferStatus {
+  HOLDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum JobStatus {
+  OPEN
+  CLOSED
+}
+
+enum WorkMode {
+  ONSITE
+  HYBRID
+  REMOTE
+}
+
+enum ApplicationStatus {
+  APPLIED // waiting for the recruiter's mandatory response
+  ACCEPTED // recruiter accepted the application (with a message)
+  REJECTED // recruiter rejected (with a reason)
+  INTERVIEWING
+  OFFERED
+  JOINED
+  NOT_JOINED
+  WITHDRAWN // candidate withdrew
+}
+
+enum InterviewMode {
+  VIDEO
+  PHONE
+  IN_PERSON
+  READYHIRE_ROOM
+}
+
+enum InterviewStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum GhostingStage {
+  INTERVIEW_NO_SHOW
+  OFFER_NO_RESPONSE
+  DID_NOT_JOIN
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  UPHELD
+  DISMISSED
+}
+
+// ───────────────────────────── Accounts ─────────────────────────────
+
+model User {
+  id               String        @id @default(cuid())
+  email            String        @unique
+  passwordHash     String
+  name             String
+  role             Role
+  status           AccountStatus @default(ACTIVE)
+  restrictedReason String?
+  flagged          Boolean       @default(false)
+  flagReason       String?
+  termsAcceptedAt  DateTime
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  candidate CandidateProfile? @relation("CandidateUser")
+  recruiter RecruiterProfile? @relation("RecruiterUser")
+
+  verifiedCandidates   CandidateProfile[] @relation("CandidateVerifier")
+  reviewedDocuments    Document[]         @relation("DocumentReviewer")
+  reviewedRecruiters   RecruiterProfile[] @relation("RecruiterReviewer")
+  applicationEvents    ApplicationEvent[]
+  ghostingReportsFiled GhostingReport[]   @relation("GhostingReporter")
+}
+
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  domain    String   @unique // official email domain, e.g. northwind.com
+  website   String?
+  city      String?
+  createdAt DateTime @default(now())
+
+  recruiters RecruiterProfile[]
+  jobs       Job[]
+}
+
+model RecruiterProfile {
+  id             String         @id @default(cuid())
+  userId         String         @unique
+  user           User           @relation("RecruiterUser", fields: [userId], references: [id], onDelete: Cascade)
+  companyId      String
+  company        Company        @relation(fields: [companyId], references: [id])
+  title          String?
+  phone          String?
+  approvalStatus ApprovalStatus @default(PENDING)
+  reviewNote     String?
+  reviewedAt     DateTime?
+  reviewedById   String?
+  reviewedBy     User?          @relation("RecruiterReviewer", fields: [reviewedById], references: [id])
+  createdAt      DateTime       @default(now())
+
+  jobs Job[]
+}
+
+model CandidateProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation("CandidateUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  phone           String?
+  city            String?
+  headline        String?
+  currentCompany  String?
+  currentTitle    String?
+  experienceYears Float?
+  skills          String? // comma separated
+
+  // Notice-period facts. Locked while verification is pending or verified.
+  noticePeriodDays Int?
+  resignationDate  DateTime?
+  lastWorkingDay   DateTime?
+
+  verificationStatus VerificationStatus  @default(NOT_SUBMITTED)
+  submittedAt        DateTime?
+  verifiedAt         DateTime?
+  verifiedById       String?
+  verifiedBy         User?               @relation("CandidateVerifier", fields: [verifiedById], references: [id])
+  verificationMethod VerificationMethod?
+  verificationNotes  String? // internal admin notes (e.g. screen-share observations)
+  rejectionReason    String? // shown to the candidate
+
+  // Single-role commitment: at most one application at a time.
+  committedApplicationId String?      @unique
+  committedApplication   Application? @relation("Commitment", fields: [committedApplicationId], references: [id])
+  committedAt            DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  documents       Document[]
+  offers          Offer[]
+  applications    Application[]
+  ghostingReports GhostingReport[]
+}
+
+// ───────────────────────────── Verification ─────────────────────────────
+
+model Document {
+  id           String           @id @default(cuid())
+  candidateId  String
+  candidate    CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  type         DocumentType
+  fileName     String // original file name
+  storedName   String           @unique // name on disk inside UPLOAD_DIR
+  mimeType     String
+  sizeBytes    Int
+  status       DocumentStatus   @default(PENDING)
+  reviewNote   String?
+  reviewedAt   DateTime?
+  reviewedById String?
+  reviewedBy   User?            @relation("DocumentReviewer", fields: [reviewedById], references: [id])
+  uploadedAt   DateTime         @default(now())
+
+  offer Offer?
+
+  @@index([candidateId, type])
+}
+
+model Offer {
+  id          String           @id @default(cuid())
+  candidateId String
+  candidate   CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  company     String
+  role        String
+  ctcLpa      Float?
+  offeredOn   DateTime?
+  joiningDate DateTime?
+  status      OfferStatus      @default(HOLDING)
+  documentId  String?          @unique
+  document    Document?        @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+// ───────────────────────────── Hiring ─────────────────────────────
+
+model Job {
+  id             String           @id @default(cuid())
+  recruiterId    String
+  recruiter      RecruiterProfile @relation(fields: [recruiterId], references: [id])
+  companyId      String
+  company        Company          @relation(fields: [companyId], references: [id])
+  title          String
+  description    String
+  location       String
+  workMode       WorkMode         @default(HYBRID)
+  minExperience  Int              @default(0)
+  maxExperience  Int?
+  skills         String // comma separated
+  ctcMinLpa      Float?
+  ctcMaxLpa      Float?
+  maxJoiningDays Int? // hiring team needs someone who can join within N days
+  openings       Int              @default(1)
+  status         JobStatus        @default(OPEN)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  applications Application[]
+}
+
+model Application {
+  id          String            @id @default(cuid())
+  jobId       String
+  job         Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  candidateId String
+  candidate   CandidateProfile  @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  status      ApplicationStatus @default(APPLIED)
+  coverNote   String?
+
+  // Mandatory recruiter response
+  respondedAt       DateTime?
+  responseMessage   String? // message sent with an acceptance
+  rejectionCategory String?
+  rejectionReason   String?
+
+  // Offer + joining
+  offerCtcLpa      Float?
+  offerJoiningDate DateTime?
+  outcomeAt        DateTime?
+  notJoinedReason  String?
+  withdrawnReason  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  committedBy     CandidateProfile?  @relation("Commitment")
+  interviews      Interview[]
+  events          ApplicationEvent[]
+  ghostingReports GhostingReport[]
+
+  @@unique([jobId, candidateId])
+  @@index([status])
+}
+
+model Interview {
+  id                 String          @id @default(cuid())
+  applicationId      String
+  application        Application     @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  round              String
+  scheduledAt        DateTime
+  durationMins       Int             @default(45)
+  mode               InterviewMode
+  location           String? // meeting link, address or Readyhire room
+  notes              String?
+  status             InterviewStatus @default(SCHEDULED)
+  candidateConfirmed Boolean         @default(false)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+}
+
+// Timeline of everything that happened on an application, visible to both sides.
+model ApplicationEvent {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  actorId       String?
+  actor         User?       @relation(fields: [actorId], references: [id])
+  type          String
+  message       String?
+  createdAt     DateTime    @default(now())
+
+  @@index([applicationId, createdAt])
+}
+
+model GhostingReport {
+  id             String           @id @default(cuid())
+  applicationId  String
+  application    Application      @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  candidateId    String
+  candidate      CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  reporterId     String
+  reporter       User             @relation("GhostingReporter", fields: [reporterId], references: [id])
+  stage          GhostingStage
+  details        String
+  status         ReportStatus     @default(OPEN)
+  resolutionNote String?
+  resolvedAt     DateTime?
+  createdAt      DateTime         @default(now())
+}
