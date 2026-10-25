@@ -17,6 +17,37 @@ Set up a **staging** copy of each piece (a second Supabase project, a second buc
 
 ---
 
+## Starting on free tiers (beta)
+
+The repository is currently configured for this cheaper setup, to get real users on before paying for everything:
+
+| Piece     | Service                                    | Notes                                                              |
+| --------- | ------------------------------------------ | ------------------------------------------------------------------ |
+| App       | **Vercel Hobby**, functions in Singapore   | Free, but not for commercial use; cron jobs run at most once a day |
+| Database  | **Neon**, AWS Singapore (`ap-southeast-1`) | Free tier; same region as the functions so queries stay fast       |
+| Documents | **AWS S3**, Mumbai (`ap-south-1`), private | As in step 2 below; CORS origin is your `*.vercel.app` URL         |
+| Email     | **Gmail SMTP** with an app password        | Sends to anyone without owning a domain; about 500 emails a day    |
+| Domain    | `<project>.vercel.app`                     | Add your own domain later (step 4.4)                               |
+
+Differences from the steps below:
+
+- **Database:** create a separate Neon project for production (never reuse the development database). Use the
+  **pooled** connection string (host contains `-pooler`) for `DATABASE_URL` and the direct one for `DIRECT_URL`.
+- **Email:** turn on 2-Step Verification for the Google account, create an app password
+  (Google Account → Security → App passwords), then set `EMAIL_DRIVER=smtp`,
+  `SMTP_URL=smtps://you%40gmail.com:<app password without spaces>@smtp.gmail.com:465` (the `@` in the address is
+  written `%40`) and `EMAIL_FROM="Readyhire <you@gmail.com>"`.
+- **Reminders:** `vercel.json` runs `/api/cron/reminders` daily at 09:00 IST. Recruiters still get the "due within
+  24 hours" and "overdue" emails, just up to a day later than with the hourly schedule; overdue recruiters are blocked
+  from posting jobs immediately either way.
+- **Preview deployments:** set the environment variables for **Production only**, so previews can never reach the
+  production database. Previews will show a configuration error until a staging database exists.
+
+Moving to the recommended setup later: switch Vercel to Pro, set the cron back to hourly (`"5 * * * *"`), and if the
+database moves to Mumbai, set `regions` back to `["bom1"]` so the app runs next to it.
+
+---
+
 ## 1. Database — Supabase
 
 1. Create a project in **South Asia (Mumbai)**. Save the database password.
@@ -84,7 +115,7 @@ To use AWS SES or another provider instead: `EMAIL_DRIVER=smtp` and
 
 1. **Add New → Project**, import the `readyhire` repository. Vercel detects Next.js and uses the `vercel-build`
    script, which generates the Prisma client, runs migrations (production deployments only) and builds.
-2. `vercel.json` already pins functions to Mumbai (`bom1`) and schedules `/api/cron/reminders` hourly.
+2. `vercel.json` pins functions to one region (keep it next to the database) and schedules `/api/cron/reminders`.
 3. **Settings → Environment Variables** — for **Production**:
 
    | Variable                                       | Value                                                     |
