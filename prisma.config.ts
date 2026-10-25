@@ -8,7 +8,8 @@ export default defineConfig({
     seed: "tsx prisma/seed.ts",
   },
   datasource: {
-    // Falls back to a local SQLite file so the app runs without a .env file.
-    url: process.env.DATABASE_URL ?? "file:./prisma/dev.db",
+    // Migrations need a direct (non-pooled) connection. On Supabase, DATABASE_URL is the pooler
+    // and DIRECT_URL the direct connection; locally both can be the same.
+    url: process.env.DIRECT_URL ?? process.env.DATABASE_URL ?? "",
   },
 });

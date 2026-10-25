@@ -1,10 +1,11 @@
-import { type Page, expect, test } from "@playwright/test";
-import { SAMPLE_PDF, formError, signIn } from "./helpers";
+import { expect, test } from "@playwright/test";
+import { e2eEnv } from "../playwright.config";
+import { SAMPLE_PDF, formError, linkFromEmail, sentEmails, signIn } from "./helpers";
 
 // The flows build on each other (verify → apply → respond → commit), so they run in order.
 test.describe.configure({ mode: "serial" });
 
-test("recruiters must sign up with a company email domain", async ({ page }) => {
+test("recruiters sign up with a company domain and confirm their work email", async ({ page }) => {
   await page.goto("/signup/recruiter");
   await page.getByLabel("Full name").fill("Test Recruiter");
   await page.getByLabel("Work email").fill("someone@gmail.com");
@@ -21,7 +22,47 @@ test("recruiters must sign up with a company email domain", async ({ page }) => 
 
   await page.getByLabel("Company website").fill("tailspin.com");
   await page.getByRole("button", { name: "Create account" }).click();
+  await expect(page.getByRole("heading", { name: "Confirm your email" })).toBeVisible();
+
+  // Dashboards stay locked until the inbox is confirmed.
+  await page.goto("/recruiter");
+  await expect(page).toHaveURL(/\/verify-email$/);
+
+  await page.goto(await linkFromEmail("lead@tailspin.com", /Confirm your email/));
+  await page.getByRole("button", { name: "Confirm email" }).click();
   await expect(page.getByText("Your account is awaiting approval")).toBeVisible();
+});
+
+test("candidates confirm their email and can reset a forgotten password", async ({ page }) => {
+  await page.goto("/signup/candidate");
+  await page.getByLabel("Full name").fill("Meena Pillai");
+  await page.getByLabel("Email").fill("meena.pillai@example.com");
+  await page.getByLabel("Password").fill("first-password");
+  await page.getByLabel("City").selectOption("Hyderabad");
+  await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: "Create account" }).click();
+  await expect(page.getByRole("heading", { name: "Confirm your email" })).toBeVisible();
+
+  await page.goto(await linkFromEmail("meena.pillai@example.com", /Confirm your email/));
+  await page.getByRole("button", { name: "Confirm email" }).click();
+  await expect(page.getByRole("heading", { name: "Welcome, Meena" })).toBeVisible();
+
+  await page.context().clearCookies();
+  await page.goto("/forgot-password");
+  await page.getByLabel("Email").fill("meena.pillai@example.com");
+  await page.getByRole("button", { name: "Email me a reset link" }).click();
+  await expect(page.getByRole("status")).toContainText("If an account exists");
+
+  const resetLink = await linkFromEmail("meena.pillai@example.com", /Reset your Readyhire password/);
+  await page.goto(resetLink);
+  await page.getByLabel("New password", { exact: true }).fill("second-password");
+  await page.getByLabel("Repeat new password").fill("second-password");
+  await page.getByRole("button", { name: "Save password" }).click();
+  await expect(page.getByRole("heading", { name: "Welcome, Meena" })).toBeVisible();
+
+  // Reset links are single-use.
+  await page.goto(resetLink);
+  await expect(page.getByText("expired or was already used")).toBeVisible();
 });
 
 test("a candidate is listed only after an admin verifies every document", async ({ browser }) => {
@@ -67,9 +108,26 @@ test("a candidate is listed only after an admin verifies every document", async 
   await admin.getByLabel("Verification method").selectOption("SCREEN_SHARE");
   await admin.getByRole("button", { name: "Approve & list candidate" }).click();
   await expect(admin.getByText("Revoke verification")).toBeVisible();
+  await expect.poll(() => sentEmails("neha.gupta@example.com").some((e) => /verified/.test(e.subject))).toBe(true);
+
+  await admin.goto("/admin/audit");
+  await expect(admin.getByText("CANDIDATE_VERIFIED")).toBeVisible();
 
   await priya.reload();
   await expect(priya.getByText("Neha Gupta")).toBeVisible();
+});
+
+test("uploads are checked by content, not by the declared type", async ({ browser }) => {
+  const divya = await signIn(browser, "divya.menon@example.com");
+  await divya.goto("/candidate/verification");
+  const row = divya.getByRole("listitem").filter({ hasText: "Resignation evidence" });
+  await row.getByLabel("Resignation evidence file").setInputFiles({
+    name: "resignation.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from("this is not really a pdf"),
+  });
+  await row.getByRole("button", { name: "Replace file" }).click();
+  await expect(row.getByRole("alert")).toContainText("isn't a valid PDF");
 });
 
 test("every application gets an accept with a message or a reject with a reason", async ({ browser }) => {
@@ -82,6 +140,7 @@ test("every application gets an accept with a message or a reject with a reason"
   };
   await applyTo("QA Automation Engineer");
   await applyTo("Data Engineer");
+  await expect.poll(() => sentEmails("priya.menon@northwind.com").filter((e) => /New application/.test(e.subject)).length).toBe(2);
 
   const priya = await signIn(browser, "priya.menon@northwind.com");
   const openApplication = async (job: string) => {
@@ -114,6 +173,7 @@ test("every application gets an accept with a message or a reject with a reason"
   await expect(neha.getByRole("row").filter({ hasText: "Data Engineer" })).toContainText(
     "We need production Spark experience for this role.",
   );
+  await expect.poll(() => sentEmails("neha.gupta@example.com").some((e) => /accepted your application/.test(e.subject))).toBe(true);
 });
 
 test("a candidate can commit to only one role at a time", async ({ browser }) => {
@@ -134,11 +194,16 @@ test("a candidate can commit to only one role at a time", async ({ browser }) =>
   await expect(priya.getByText("Committed to this role").first()).toBeVisible();
 });
 
-test("recruiters with overdue responses can't post new jobs", async ({ browser }) => {
-  const arjun: Page = await signIn(browser, "arjun.rao@contoso.com");
+test("overdue responses pause job posting and trigger a reminder", async ({ browser, request }) => {
+  const arjun = await signIn(browser, "arjun.rao@contoso.com");
   await expect(arjun.getByText(/overdue for a response/)).toBeVisible();
   await arjun.goto("/recruiter/jobs/new");
   await expect(arjun.getByText("Posting is paused")).toBeVisible();
+
+  expect((await request.get("/api/cron/reminders")).status()).toBe(401);
+  const run = await request.get("/api/cron/reminders", { headers: { Authorization: `Bearer ${e2eEnv.CRON_SECRET}` } });
+  expect(run.ok()).toBe(true);
+  expect(sentEmails("arjun.rao@contoso.com").some((e) => /overdue/.test(e.subject))).toBe(true);
 });
 
 test("only admins and the owner can open candidate documents", async ({ browser }) => {
@@ -146,8 +211,19 @@ test("only admins and the owner can open candidate documents", async ({ browser 
   await admin.goto("/admin/verifications?status=PENDING");
   await admin.getByRole("link", { name: "Rohan Verma" }).click();
   const href = await admin.getByRole("link", { name: "resignation-acceptance.pdf" }).getAttribute("href");
-  expect((await admin.request.get(href!)).status()).toBe(200);
+
+  const asAdmin = await admin.request.get(href!);
+  expect(asAdmin.status()).toBe(200);
+  expect(asAdmin.headers()["content-type"]).toBe("application/pdf");
 
   const priya = await signIn(browser, "priya.menon@northwind.com");
   expect((await priya.request.get(href!)).status()).toBe(404);
+});
+
+test("pages are served with a nonce-based content security policy", async ({ request }) => {
+  const response = await request.get("/login");
+  const csp = response.headers()["content-security-policy"];
+  expect(csp).toMatch(/script-src 'self' 'nonce-[^']+' 'strict-dynamic'/);
+  expect(csp).toContain("frame-ancestors 'self'");
+  expect(response.headers()["x-content-type-options"]).toBe("nosniff");
 });

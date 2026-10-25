@@ -24,10 +24,10 @@ export default async function JobsPage({ searchParams }: PageProps<"/candidate/j
     ...(q
       ? {
           OR: [
-            { title: { contains: q } },
-            { skills: { contains: q } },
-            { location: { contains: q } },
-            { company: { name: { contains: q } } },
+            { title: { contains: q, mode: "insensitive" } },
+            { skills: { contains: q, mode: "insensitive" } },
+            { location: { contains: q, mode: "insensitive" } },
+            { company: { name: { contains: q, mode: "insensitive" } } },
           ],
         }
       : {}),

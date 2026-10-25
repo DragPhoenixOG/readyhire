@@ -29,7 +29,7 @@ export default async function AdminUsersPage({ searchParams }: PageProps<"/admin
     ...(filter === "CANDIDATE" || filter === "RECRUITER" ? { role: filter } : {}),
     ...(filter === "flagged" ? { flagged: true } : {}),
     ...(filter === "restricted" ? { status: "RESTRICTED" } : {}),
-    ...(q ? { OR: [{ name: { contains: q } }, { email: { contains: q } }] } : {}),
+    ...(q ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { email: { contains: q, mode: "insensitive" } }] } : {}),
   };
   const users = await db.user.findMany({
     where,

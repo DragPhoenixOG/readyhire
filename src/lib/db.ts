@@ -1,17 +1,31 @@
 import "server-only";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
+import { env } from "@/lib/env";
 
 function createClient() {
-  const adapter = new PrismaBetterSqlite3({
-    url: process.env.DATABASE_URL ?? "file:./prisma/dev.db",
+  const adapter = new PrismaPg({
+    connectionString: env.DATABASE_URL,
+    // Serverless instances each hold their own pool; keep it small and let the
+    // provider's pooler (e.g. Supabase Supavisor) do the fan-in.
+    max: env.DATABASE_POOL_SIZE,
   });
   return new PrismaClient({ adapter });
 }
 
-// Reuse one client across hot reloads in development.
-const globalForPrisma = globalThis as unknown as { prisma?: ReturnType<typeof createClient> };
+// One client per process (and across hot reloads in development).
+const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-export const db = globalForPrisma.prisma ?? createClient();
+function client() {
+  globalForPrisma.prisma ??= createClient();
+  return globalForPrisma.prisma;
+}
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db;
+/** Created on first use, so importing this module (e.g. during `next build`) needs no configuration. */
+export const db = new Proxy({} as PrismaClient, {
+  get(_target, property) {
+    const target = client();
+    const value = Reflect.get(target, property, target);
+    return typeof value === "function" ? value.bind(target) : value;
+  },
+});

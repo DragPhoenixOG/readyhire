@@ -28,10 +28,10 @@ export default async function TalentPoolPage({ searchParams }: PageProps<"/recru
     ...(q
       ? {
           OR: [
-            { skills: { contains: q } },
-            { headline: { contains: q } },
-            { currentTitle: { contains: q } },
-            { user: { name: { contains: q } } },
+            { skills: { contains: q, mode: "insensitive" } },
+            { headline: { contains: q, mode: "insensitive" } },
+            { currentTitle: { contains: q, mode: "insensitive" } },
+            { user: { name: { contains: q, mode: "insensitive" } } },
           ],
         }
       : {}),

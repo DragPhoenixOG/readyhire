@@ -72,3 +72,8 @@ export const listableCandidateWhere = {
   user: { status: "ACTIVE" },
   applications: { none: { status: "JOINED" } },
 } satisfies Prisma.CandidateProfileWhereInput;
+
+/** Notice details, required documents and current company can only change before submission or after a rejection. */
+export function verificationEditable(status: string) {
+  return status === "NOT_SUBMITTED" || status === "REJECTED";
+}

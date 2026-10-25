@@ -33,9 +33,14 @@ export default async function PublicLayout({ children }: LayoutProps<"/">) {
       <footer className="border-t border-slate-200 bg-white">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-5 text-sm text-slate-500 sm:px-6">
           <p>Readyhire — Hire with confirmed availability.</p>
-          <Link href="/terms" className="hover:text-slate-800">
-            Terms &amp; platform rules
-          </Link>
+          <div className="flex gap-4">
+            <Link href="/terms" className="hover:text-slate-800">
+              Terms &amp; platform rules
+            </Link>
+            <Link href="/privacy" className="hover:text-slate-800">
+              Privacy
+            </Link>
+          </div>
         </div>
       </footer>
     </div>

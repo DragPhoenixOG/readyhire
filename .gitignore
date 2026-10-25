@@ -43,11 +43,10 @@ next-env.d.ts
 
 /src/generated/prisma
 
-# local data
-/uploads
-/uploads-e2e
-/prisma/*.db
-/prisma/*.db-journal
+# local data (document storage, e2e email outbox)
+/storage
+/storage-e2e
+/.e2e
 
 # playwright
 /test-results

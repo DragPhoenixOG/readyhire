@@ -1,12 +1,9 @@
-// Seeds a demo dataset covering every status flow. Re-running it wipes and recreates all data.
+// Seeds a demo dataset covering every status flow. Re-running it WIPES and recreates all data,
+// so it refuses to run against production. Use `npm run create-admin` to bootstrap production.
 // Dates are relative to "now" so the demo always has upcoming interviews and fresh/overdue applications.
-import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { randomUUID } from "node:crypto";
-import { mkdir, unlink, writeFile } from "node:fs/promises";
-import path from "node:path";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
-import { PrismaClient } from "../src/generated/prisma/client";
+import { appEnv, createScriptClient, createScriptStore } from "../scripts/support";
 import type {
   ApplicationStatus,
   DocumentStatus,
@@ -16,10 +13,13 @@ import type {
   VerificationStatus,
 } from "../src/generated/prisma/enums";
 
-const db = new PrismaClient({
-  adapter: new PrismaBetterSqlite3({ url: process.env.DATABASE_URL ?? "file:./prisma/dev.db" }),
-});
-const UPLOAD_DIR = path.resolve(process.env.UPLOAD_DIR ?? path.join(process.cwd(), "uploads"));
+if (appEnv() === "production") {
+  console.error("Refusing to seed demo data into production (APP_ENV=production). Use `npm run create-admin` instead.");
+  process.exit(1);
+}
+
+const db = createScriptClient();
+const store = createScriptStore();
 const PASSWORD = "Readyhire@123";
 
 const HOUR = 60 * 60 * 1000;
@@ -75,8 +75,8 @@ function makePdf(title: string, lines: string[]) {
 }
 
 async function wipe() {
-  const files = await db.document.findMany({ select: { storedName: true } });
-  await Promise.all(files.map((f) => unlink(path.join(UPLOAD_DIR, f.storedName)).catch(() => undefined)));
+  const files = await db.document.findMany({ select: { storageKey: true } });
+  await Promise.all(files.map((f) => store.remove(f.storageKey)));
   // Break the candidate <-> application commitment cycle before deleting.
   await db.candidateProfile.updateMany({ data: { committedApplicationId: null } });
   await db.applicationEvent.deleteMany();
@@ -89,17 +89,25 @@ async function wipe() {
   await db.candidateProfile.deleteMany();
   await db.recruiterProfile.deleteMany();
   await db.company.deleteMany();
+  await db.auditLog.deleteMany();
+  await db.rateLimit.deleteMany();
   await db.user.deleteMany();
 }
 
 async function main() {
   await wipe();
-  await mkdir(UPLOAD_DIR, { recursive: true });
   const passwordHash = await bcrypt.hash(PASSWORD, 10);
 
   // ───────────── Admin ─────────────
   const admin = await db.user.create({
-    data: { name: "Meera Nair", email: "admin@readyhire.in", passwordHash, role: "ADMIN", termsAcceptedAt: daysAgo(120) },
+    data: {
+      name: "Meera Nair",
+      email: "admin@readyhire.in",
+      passwordHash,
+      role: "ADMIN",
+      termsAcceptedAt: daysAgo(120),
+      emailVerifiedAt: daysAgo(120),
+    },
   });
 
   // ───────────── Companies & recruiters ─────────────
@@ -128,6 +136,7 @@ async function main() {
         passwordHash,
         role: "RECRUITER",
         termsAcceptedAt: createdAt,
+        emailVerifiedAt: createdAt,
         createdAt,
         recruiter: {
           create: {
@@ -279,15 +288,15 @@ async function main() {
   };
 
   async function storeDoc(candidateId: string, type: DocumentType, fileName: string, title: string, lines: string[], spec: DocSpec, uploadedAt: Date) {
-    const storedName = `${randomUUID()}.pdf`;
+    const storageKey = `candidates/${candidateId}/${randomUUID()}.pdf`;
     const bytes = makePdf(title, lines);
-    await writeFile(path.join(UPLOAD_DIR, storedName), bytes);
+    await store.put(storageKey, bytes, "application/pdf");
     return db.document.create({
       data: {
         candidateId,
         type,
         fileName,
-        storedName,
+        storageKey,
         mimeType: "application/pdf",
         sizeBytes: bytes.length,
         status: spec.status,
@@ -311,6 +320,7 @@ async function main() {
         passwordHash,
         role: "CANDIDATE",
         termsAcceptedAt: signedUp,
+        emailVerifiedAt: signedUp,
         createdAt: signedUp,
         status: spec.restricted ? "RESTRICTED" : "ACTIVE",
         restrictedReason: spec.restricted ?? null,

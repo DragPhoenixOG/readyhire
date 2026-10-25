@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /$
+Allow: /terms
+Allow: /privacy
+Allow: /signup
+Disallow: /admin
+Disallow: /recruiter
+Disallow: /candidate
+Disallow: /api

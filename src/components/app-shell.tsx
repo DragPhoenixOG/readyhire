@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { logout } from "@/actions/auth";
 import { Logo } from "@/components/logo";
@@ -28,10 +29,13 @@ export function AppShell({
             <Badge tone="green">{roleLabel}</Badge>
           </div>
           <div className="flex items-center gap-3">
-            <div className="hidden text-right sm:block">
-              <p className="text-sm font-medium text-slate-900">{user.name}</p>
-              <p className="text-xs text-slate-500">{user.email}</p>
-            </div>
+            <Link href={`${root}/account`} className="rounded-lg px-2 py-1 text-right hover:bg-slate-50" title="Account settings">
+              <span className="hidden sm:block">
+                <span className="block text-sm font-medium text-slate-900">{user.name}</span>
+                <span className="block text-xs text-slate-500">{user.email}</span>
+              </span>
+              <span className="text-sm font-medium text-slate-700 sm:hidden">Account</span>
+            </Link>
             <form action={logout}>
               <button type="submit" className={buttonClass("secondary", "sm")}>
                 Sign out

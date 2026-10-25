@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { addOffer, updateOffer } from "@/actions/candidate";
 import { ActionForm } from "@/components/action-form";
+import { DocumentUploader } from "@/components/document-uploader";
 import { DocumentStatusBadge, OfferStatusBadge } from "@/components/status";
-import { Card, EmptyState, Field, PageHeader, StatCard, fileInputClass, inputClass } from "@/components/ui";
+import { Card, EmptyState, Field, PageHeader, StatCard, inputClass } from "@/components/ui";
 import { requireCandidate } from "@/lib/auth";
 import { ACTIVE_OFFER_STATUSES, OFFER_STATUS_LABEL } from "@/lib/constants";
 import { db } from "@/lib/db";
@@ -69,15 +70,10 @@ export default async function OffersPage() {
                     "not attached"
                   )}
                 </p>
-                <ActionForm
-                  action={updateOffer}
-                  submitLabel="Update offer"
-                  variant="secondary"
-                  size="sm"
-                  encType="multipart/form-data"
-                >
+                <div className="grid gap-4 md:grid-cols-[1fr_minmax(0,16rem)]">
+                <ActionForm action={updateOffer} submitLabel="Update offer" variant="secondary" size="sm">
                   <input type="hidden" name="offerId" value={offer.id} />
-                  <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="grid gap-3 sm:grid-cols-2">
                     <Field label="Status" htmlFor={`status-${offer.id}`}>
                       <select id={`status-${offer.id}`} name="status" defaultValue={offer.status} className={inputClass}>
                         {Object.entries(OFFER_STATUS_LABEL).map(([value, label]) => (
@@ -96,17 +92,18 @@ export default async function OffersPage() {
                         className={inputClass}
                       />
                     </Field>
-                    <Field label={offer.document ? "Replace proof" : "Attach proof"} htmlFor={`file-${offer.id}`}>
-                      <input
-                        id={`file-${offer.id}`}
-                        name="file"
-                        type="file"
-                        accept="application/pdf,image/png,image/jpeg,image/webp"
-                        className={fileInputClass}
-                      />
-                    </Field>
                   </div>
                 </ActionForm>
+                <div>
+                  <p className="mb-1.5 text-sm font-medium text-slate-800">{offer.document ? "Replace offer letter" : "Attach offer letter"}</p>
+                  <DocumentUploader
+                    target={{ kind: "offer", offerId: offer.id }}
+                    label={`Offer letter from ${offer.company}`}
+                    submitLabel={offer.document ? "Replace" : "Attach"}
+                    variant="secondary"
+                  />
+                </div>
+                </div>
               </Card>
             ))
           )}
@@ -114,7 +111,7 @@ export default async function OffersPage() {
         </div>
 
         <Card title="Add an offer">
-          <ActionForm action={addOffer} submitLabel="Add offer" resetOnSuccess encType="multipart/form-data">
+          <ActionForm action={addOffer} submitLabel="Add offer" resetOnSuccess>
             <Field label="Company" htmlFor="company">
               <input id="company" name="company" required className={inputClass} />
             </Field>
@@ -141,9 +138,7 @@ export default async function OffersPage() {
                 <input id="joiningDate" name="joiningDate" type="date" className={inputClass} />
               </Field>
             </div>
-            <Field label="Offer letter (optional)" htmlFor="file" hint="Attach it so Readyhire can mark the offer as verified.">
-              <input id="file" name="file" type="file" accept="application/pdf,image/png,image/jpeg,image/webp" className={fileInputClass} />
-            </Field>
+            <p className="text-xs text-slate-500">After adding it, attach the offer letter so Readyhire can mark the offer as verified.</p>
           </ActionForm>
         </Card>
       </div>

@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
+// Every page is per-request: sessions, live data and a fresh CSP nonce (see src/proxy.ts).
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: {
     default: "Readyhire — Hire with confirmed availability",

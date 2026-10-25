@@ -22,7 +22,9 @@ export const MIN_REASON_LENGTH = 15;
 
 export const CITIES = ["Hyderabad", "Bengaluru", "Chennai", "Pune", "Mumbai", "Delhi NCR", "Other"] as const;
 
-export const REQUIRED_DOCUMENTS: DocumentType[] = ["OFFER_LETTER", "NOTICE_POLICY", "RESIGNATION_PROOF"];
+export type RequiredDocumentType = Exclude<DocumentType, "OTHER_OFFER">;
+
+export const REQUIRED_DOCUMENTS: RequiredDocumentType[] = ["OFFER_LETTER", "NOTICE_POLICY", "RESIGNATION_PROOF"];
 
 export const DOCUMENT_INFO: Record<DocumentType, { label: string; help: string }> = {
   OFFER_LETTER: {

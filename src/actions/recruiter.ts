@@ -22,6 +22,7 @@ import {
 } from "@/lib/forms";
 import { parseDateTimeInput } from "@/lib/format";
 import { overdueWhere } from "@/lib/jobs";
+import { notify } from "@/lib/notifications";
 
 // ───────────────────────── Jobs ─────────────────────────
 
@@ -107,6 +108,7 @@ export async function acceptApplication(_: ActionState, formData: FormData): Pro
     });
     await logEvent(tx, application.id, user.id, "ACCEPTED", message);
   });
+  notify.applicationResponse(application.id);
   refresh();
   return done("Application accepted and the candidate has been notified.");
 }
@@ -151,6 +153,7 @@ export async function rejectApplication(_: ActionState, formData: FormData): Pro
     }
     await logEvent(tx, application.id, user.id, "REJECTED", `${category}: ${reason}`);
   });
+  notify.applicationResponse(application.id);
   refresh();
   return done("Application rejected. The candidate can see your reason.");
 }
@@ -187,13 +190,15 @@ export async function scheduleInterview(_: ActionState, formData: FormData): Pro
   }
 
   const place = mode === "READYHIRE_ROOM" ? `Readyhire Room — ${room}` : location;
-  await db.$transaction(async (tx) => {
-    await tx.interview.create({
+  const interview = await db.$transaction(async (tx) => {
+    const created = await tx.interview.create({
       data: { applicationId, round, scheduledAt, durationMins, mode, location: place, notes },
     });
     await tx.application.update({ where: { id: applicationId }, data: { status: "INTERVIEWING" } });
     await logEvent(tx, applicationId, user.id, "INTERVIEW_SCHEDULED", `${round} on ${parsed.data.scheduledAt.replace("T", " ")} IST`);
+    return created;
   });
+  notify.interviewScheduled(interview.id);
   refresh();
   return done("Interview scheduled. The candidate will be asked to confirm.");
 }
@@ -249,6 +254,7 @@ export async function extendOffer(_: ActionState, formData: FormData): Promise<A
     });
     await logEvent(tx, applicationId, user.id, "OFFERED", message);
   });
+  notify.offerExtended(applicationId);
   refresh();
   return done("Offer recorded. It now counts towards the candidate's active offers.");
 }

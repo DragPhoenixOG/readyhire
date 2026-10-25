@@ -1,5 +1,5 @@
-// Readyhire data model.
-// Run `npm run db:reset` after changing this file to re-create and re-seed the dev database.
+// Readyhire data model (PostgreSQL).
+// After changing this file run `npm run db:migrate -- --name <change>` to create a migration.
 
 generator client {
   provider = "prisma-client"
@@ -7,7 +7,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 // ───────────────────────────── Enums ─────────────────────────────
@@ -111,6 +111,11 @@ enum ReportStatus {
   DISMISSED
 }
 
+enum AuthTokenPurpose {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
 // ───────────────────────────── Accounts ─────────────────────────────
 
 model User {
@@ -124,6 +129,10 @@ model User {
   flagged          Boolean       @default(false)
   flagReason       String?
   termsAcceptedAt  DateTime
+  emailVerifiedAt  DateTime?
+  // Bumped on password change, restriction or "sign out everywhere" to invalidate existing sessions.
+  sessionVersion   Int           @default(0)
+  lastLoginAt      DateTime?
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 
@@ -135,6 +144,44 @@ model User {
   reviewedRecruiters   RecruiterProfile[] @relation("RecruiterReviewer")
   applicationEvents    ApplicationEvent[]
   ghostingReportsFiled GhostingReport[]   @relation("GhostingReporter")
+  authTokens           AuthToken[]
+  auditLogs            AuditLog[]
+}
+
+// Single-use tokens for email verification and password reset. Only a SHA-256 hash is stored.
+model AuthToken {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purpose   AuthTokenPurpose
+  tokenHash String           @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, purpose])
+}
+
+// Fixed-window counters for login, sign-up and email throttling (works across serverless instances).
+model RateLimit {
+  key         String   @id
+  count       Int
+  windowStart DateTime
+}
+
+// Who did what to which record, for admin decisions and other trust-critical actions.
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action     String
+  entityType String
+  entityId   String
+  summary    String
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
 }
 
 model Company {
@@ -165,6 +212,9 @@ model RecruiterProfile {
   createdAt      DateTime       @default(now())
 
   jobs Job[]
+
+  @@index([companyId])
+  @@index([approvalStatus])
 }
 
 model CandidateProfile {
@@ -206,6 +256,8 @@ model CandidateProfile {
   offers          Offer[]
   applications    Application[]
   ghostingReports GhostingReport[]
+
+  @@index([verificationStatus])
 }
 
 // ───────────────────────────── Verification ─────────────────────────────
@@ -216,7 +268,7 @@ model Document {
   candidate    CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   type         DocumentType
   fileName     String // original file name
-  storedName   String           @unique // name on disk inside UPLOAD_DIR
+  storageKey   String           @unique // object key in the document store
   mimeType     String
   sizeBytes    Int
   status       DocumentStatus   @default(PENDING)
@@ -245,6 +297,8 @@ model Offer {
   document    Document?        @relation(fields: [documentId], references: [id], onDelete: SetNull)
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
+
+  @@index([candidateId])
 }
 
 // ───────────────────────────── Hiring ─────────────────────────────
@@ -271,6 +325,9 @@ model Job {
   updatedAt      DateTime         @updatedAt
 
   applications Application[]
+
+  @@index([recruiterId])
+  @@index([status])
 }
 
 model Application {
@@ -295,6 +352,10 @@ model Application {
   notJoinedReason  String?
   withdrawnReason  String?
 
+  // Response-deadline reminders sent to the recruiter (each at most once).
+  reminderSentAt     DateTime?
+  overdueAlertSentAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -304,7 +365,8 @@ model Application {
   ghostingReports GhostingReport[]
 
   @@unique([jobId, candidateId])
-  @@index([status])
+  @@index([candidateId])
+  @@index([status, createdAt])
 }
 
 model Interview {
@@ -321,6 +383,8 @@ model Interview {
   candidateConfirmed Boolean         @default(false)
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
+
+  @@index([applicationId, scheduledAt])
 }
 
 // Timeline of everything that happened on an application, visible to both sides.
@@ -351,4 +415,7 @@ model GhostingReport {
   resolutionNote String?
   resolvedAt     DateTime?
   createdAt      DateTime         @default(now())
+
+  @@index([candidateId, status])
+  @@index([status])
 }

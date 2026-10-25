@@ -4,11 +4,11 @@ import {
   reopenVerification,
   saveNoticeDetails,
   submitForVerification,
-  uploadRequiredDocument,
 } from "@/actions/candidate";
 import { ActionForm } from "@/components/action-form";
+import { DocumentUploader } from "@/components/document-uploader";
 import { DocumentStatusBadge, VerificationBadge } from "@/components/status";
-import { Card, DescriptionList, Field, Notice, PageHeader, fileInputClass, inputClass } from "@/components/ui";
+import { Card, DescriptionList, Field, Notice, PageHeader, inputClass } from "@/components/ui";
 import { requireCandidate } from "@/lib/auth";
 import { DOCUMENT_INFO, REQUIRED_DOCUMENTS, VERIFICATION_METHOD_LABEL } from "@/lib/constants";
 import { db } from "@/lib/db";
@@ -139,26 +139,12 @@ export default async function VerificationPage() {
                     )}
                   </div>
                   {editable && (
-                    <ActionForm
-                      action={uploadRequiredDocument}
+                    <DocumentUploader
+                      target={{ kind: "required", type }}
+                      label={`${DOCUMENT_INFO[type].label} file`}
                       submitLabel={doc ? "Replace file" : "Upload"}
-                      pendingLabel="Uploading…"
                       variant={doc ? "secondary" : "primary"}
-                      size="sm"
-                      resetOnSuccess
-                      encType="multipart/form-data"
-                      className="space-y-2"
-                    >
-                      <input type="hidden" name="type" value={type} />
-                      <input
-                        type="file"
-                        name="file"
-                        required
-                        accept="application/pdf,image/png,image/jpeg,image/webp"
-                        aria-label={`${DOCUMENT_INFO[type].label} file`}
-                        className={fileInputClass}
-                      />
-                    </ActionForm>
+                    />
                   )}
                 </li>
               );

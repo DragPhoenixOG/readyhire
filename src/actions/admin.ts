@@ -2,6 +2,7 @@
 
 import { refresh } from "next/cache";
 import { z } from "zod";
+import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth";
 import { DOCUMENT_INFO, REQUIRED_DOCUMENTS } from "@/lib/constants";
 import { db } from "@/lib/db";
@@ -16,6 +17,7 @@ import {
   zOptionalText,
   zReason,
 } from "@/lib/forms";
+import { notify } from "@/lib/notifications";
 
 const requireAdmin = () => requireRole("ADMIN");
 
@@ -42,9 +44,19 @@ export async function reviewDocument(_: ActionState, formData: FormData): Promis
     return fail("Required documents can only be reviewed while the candidate's submission is pending.");
   }
 
-  await db.document.update({
-    where: { id: documentId },
-    data: { status: decision, reviewNote: note, reviewedAt: new Date(), reviewedById: admin.id },
+  await db.$transaction(async (tx) => {
+    await tx.document.update({
+      where: { id: documentId },
+      data: { status: decision, reviewNote: note, reviewedAt: new Date(), reviewedById: admin.id },
+    });
+    await audit(
+      admin.id,
+      decision === "VERIFIED" ? "DOCUMENT_VERIFIED" : "DOCUMENT_REJECTED",
+      "Document",
+      documentId,
+      `${DOCUMENT_INFO[document.type].label} for candidate ${document.candidateId}${note ? `: ${note}` : ""}`,
+      tx,
+    );
   });
   refresh();
   return done(`${DOCUMENT_INFO[document.type].label} ${decision === "VERIFIED" ? "verified" : "rejected"}.`);
@@ -80,7 +92,8 @@ export async function approveCandidate(_: ActionState, formData: FormData): Prom
     return fail("Last working day can't be before the resignation date.");
   }
 
-  await db.candidateProfile.update({
+  await db.$transaction(async (tx) => {
+    await tx.candidateProfile.update({
     where: { id: candidateId },
     data: {
       verificationStatus: "VERIFIED",
@@ -93,7 +106,10 @@ export async function approveCandidate(_: ActionState, formData: FormData): Prom
       noticePeriodDays,
       lastWorkingDay,
     },
+    });
+    await audit(admin.id, "CANDIDATE_VERIFIED", "CandidateProfile", candidateId, `Verified by ${method}; notice ${noticePeriodDays} days`, tx);
   });
+  notify.verificationDecision(candidateId);
   refresh();
   return done("Candidate verified and now visible to recruiters.");
 }
@@ -101,7 +117,7 @@ export async function approveCandidate(_: ActionState, formData: FormData): Prom
 const rejectCandidateSchema = z.object({ candidateId: zId, reason: zReason("Reason for the candidate") });
 
 export async function rejectCandidate(_: ActionState, formData: FormData): Promise<ActionState> {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const parsed = parseForm(rejectCandidateSchema, formData);
   if (!parsed.ok) return fail(parsed.error);
   const { candidateId, reason } = parsed.data;
@@ -112,10 +128,21 @@ export async function rejectCandidate(_: ActionState, formData: FormData): Promi
     return fail("This profile isn't submitted.");
   }
 
-  await db.candidateProfile.update({
-    where: { id: candidateId },
-    data: { verificationStatus: "REJECTED", rejectionReason: reason, verifiedAt: null },
+  await db.$transaction(async (tx) => {
+    await tx.candidateProfile.update({
+      where: { id: candidateId },
+      data: { verificationStatus: "REJECTED", rejectionReason: reason, verifiedAt: null },
+    });
+    await audit(
+      admin.id,
+      candidate.verificationStatus === "VERIFIED" ? "CANDIDATE_VERIFICATION_REVOKED" : "CANDIDATE_REJECTED",
+      "CandidateProfile",
+      candidateId,
+      reason,
+      tx,
+    );
   });
+  notify.verificationDecision(candidateId);
   refresh();
   return done("Verification rejected. The candidate can fix the issues and resubmit.");
 }
@@ -140,10 +167,14 @@ export async function decideRecruiter(_: ActionState, formData: FormData): Promi
   const recruiter = await db.recruiterProfile.findUnique({ where: { id: recruiterId } });
   if (!recruiter) return fail("Recruiter not found.");
 
-  await db.recruiterProfile.update({
-    where: { id: recruiterId },
-    data: { approvalStatus: decision, reviewNote: note, reviewedAt: new Date(), reviewedById: admin.id },
+  await db.$transaction(async (tx) => {
+    await tx.recruiterProfile.update({
+      where: { id: recruiterId },
+      data: { approvalStatus: decision, reviewNote: note, reviewedAt: new Date(), reviewedById: admin.id },
+    });
+    await audit(admin.id, `RECRUITER_${decision}`, "RecruiterProfile", recruiterId, note ?? decision.toLowerCase(), tx);
   });
+  if (decision !== recruiter.approvalStatus) notify.recruiterDecision(recruiterId);
   refresh();
   return done(decision === "APPROVED" ? "Recruiter approved." : "Recruiter rejected.");
 }
@@ -153,15 +184,18 @@ export async function decideRecruiter(_: ActionState, formData: FormData): Promi
 const flagSchema = z.object({ userId: zId, flagged: z.enum(["true", "false"]), reason: zOptionalText(500) });
 
 export async function setUserFlag(_: ActionState, formData: FormData): Promise<ActionState> {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const parsed = parseForm(flagSchema, formData);
   if (!parsed.ok) return fail(parsed.error);
   const flagged = parsed.data.flagged === "true";
   if (flagged && !parsed.data.reason) return fail("Add a reason for the flag.");
 
-  await db.user.update({
-    where: { id: parsed.data.userId },
-    data: { flagged, flagReason: flagged ? parsed.data.reason : null },
+  await db.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: parsed.data.userId },
+      data: { flagged, flagReason: flagged ? parsed.data.reason : null },
+    });
+    await audit(admin.id, flagged ? "USER_FLAGGED" : "USER_UNFLAGGED", "User", parsed.data.userId, parsed.data.reason ?? "Flag removed", tx);
   });
   refresh();
   return done(flagged ? "User flagged." : "Flag removed.");
@@ -180,9 +214,17 @@ export async function setUserRestriction(_: ActionState, formData: FormData): Pr
   if (!user) return fail("User not found.");
   if (user.role === "ADMIN" || user.id === admin.id) return fail("Admins can't be restricted here.");
 
-  await db.user.update({
-    where: { id: user.id },
-    data: { status: restrict ? "RESTRICTED" : "ACTIVE", restrictedReason: restrict ? parsed.data.reason : null },
+  await db.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: user.id },
+      data: {
+        status: restrict ? "RESTRICTED" : "ACTIVE",
+        restrictedReason: restrict ? parsed.data.reason : null,
+        // Ends every active session of a restricted user.
+        ...(restrict ? { sessionVersion: { increment: 1 } } : {}),
+      },
+    });
+    await audit(admin.id, restrict ? "USER_RESTRICTED" : "USER_UNRESTRICTED", "User", user.id, parsed.data.reason ?? "Restriction lifted", tx);
   });
   refresh();
   return done(restrict ? "User restricted. They can no longer sign in." : "Restriction lifted.");
@@ -197,7 +239,7 @@ const reportSchema = z.object({
 });
 
 export async function resolveGhostingReport(_: ActionState, formData: FormData): Promise<ActionState> {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const parsed = parseForm(reportSchema, formData);
   if (!parsed.ok) return fail(parsed.error);
   const { reportId, decision, note } = parsed.data;
@@ -206,9 +248,12 @@ export async function resolveGhostingReport(_: ActionState, formData: FormData):
   if (!report) return fail("Report not found.");
   if (report.status !== "OPEN") return fail("This report is already resolved.");
 
-  await db.ghostingReport.update({
-    where: { id: reportId },
-    data: { status: decision, resolutionNote: note, resolvedAt: new Date() },
+  await db.$transaction(async (tx) => {
+    await tx.ghostingReport.update({
+      where: { id: reportId },
+      data: { status: decision, resolutionNote: note, resolvedAt: new Date() },
+    });
+    await audit(admin.id, `GHOSTING_REPORT_${decision}`, "GhostingReport", reportId, note, tx);
   });
   refresh();
   return done(decision === "UPHELD" ? "Report upheld. Recruiters now see it on the candidate's profile." : "Report dismissed.");

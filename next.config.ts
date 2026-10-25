@@ -2,17 +2,14 @@ import path from "node:path";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Every role dashboard is per-user and read at request time, so the app uses
-  // classic dynamic rendering instead of Cache Components.
+  // Every dashboard is per-user and read at request time, so the app uses classic dynamic
+  // rendering instead of Cache Components.
   cacheComponents: false,
-  experimental: {
-    serverActions: {
-      // Document uploads are capped at 5 MB in src/lib/uploads.ts; leave room for multipart overhead.
-      bodySizeLimit: "6mb",
-    },
-  },
+  // Self-contained server bundle for the Docker image (the Dockerfile sets NEXT_OUTPUT).
+  output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
+  poweredByHeader: false,
   turbopack: {
-    // The repository root has its own package-lock.json (Playwright demo); this app is self-contained.
+    // Pin the project root so Next.js never infers it from a lockfile in a parent folder.
     root: path.join(__dirname),
     rules: {
       "*.css": {

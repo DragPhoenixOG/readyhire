@@ -3,8 +3,8 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import type { DocumentType } from "@/generated/prisma/enums";
 import { requireCandidate } from "@/lib/auth";
+import { verificationEditable } from "@/lib/candidate";
 import {
   CITIES,
   COMMITTABLE_STATUSES,
@@ -28,12 +28,7 @@ import {
   zReason,
   zText,
 } from "@/lib/forms";
-import { deleteStoredFile, storeUpload } from "@/lib/uploads";
-
-/** Notice details and required documents can only change before submission or after a rejection. */
-function verificationEditable(status: string) {
-  return status === "NOT_SUBMITTED" || status === "REJECTED";
-}
+import { notify } from "@/lib/notifications";
 
 // ───────────────────────── Profile ─────────────────────────
 
@@ -84,34 +79,6 @@ export async function saveNoticeDetails(_: ActionState, formData: FormData): Pro
   await db.candidateProfile.update({ where: { id: profile.id }, data: parsed.data });
   refresh();
   return done("Notice details saved.");
-}
-
-const uploadSchema = z.object({
-  type: z.enum(REQUIRED_DOCUMENTS as [DocumentType, ...DocumentType[]], { error: "Choose a document type." }),
-});
-
-export async function uploadRequiredDocument(_: ActionState, formData: FormData): Promise<ActionState> {
-  const { profile } = await requireCandidate();
-  if (!verificationEditable(profile.verificationStatus)) {
-    return fail("Documents are locked while verification is pending or complete.");
-  }
-  const parsed = parseForm(uploadSchema, formData);
-  if (!parsed.ok) return fail(parsed.error);
-  const { type } = parsed.data;
-
-  const stored = await storeUpload(formData.get("file"));
-  if ("error" in stored) return fail(stored.error);
-
-  // One current document per required type: a new upload replaces the previous one.
-  const previous = await db.document.findMany({ where: { candidateId: profile.id, type } });
-  await db.$transaction([
-    db.document.deleteMany({ where: { id: { in: previous.map((d) => d.id) } } }),
-    db.document.create({ data: { candidateId: profile.id, type, ...stored } }),
-  ]);
-  await Promise.all(previous.map((d) => deleteStoredFile(d.storedName)));
-
-  refresh();
-  return done(`${DOCUMENT_INFO[type].label} uploaded.`);
 }
 
 export async function submitForVerification(): Promise<ActionState> {
@@ -167,24 +134,14 @@ const offerSchema = z.object({
   status: z.enum(["HOLDING", "ACCEPTED", "DECLINED", "EXPIRED"], { error: "Choose the offer status." }),
 });
 
-async function storeOfferProof(candidateId: string, file: FormDataEntryValue | null) {
-  if (!(file instanceof File) || file.size === 0) return null;
-  const stored = await storeUpload(file);
-  if ("error" in stored) return stored;
-  return db.document.create({ data: { candidateId, type: "OTHER_OFFER", ...stored } });
-}
-
 export async function addOffer(_: ActionState, formData: FormData): Promise<ActionState> {
   const { profile } = await requireCandidate();
   const parsed = parseForm(offerSchema, formData);
   if (!parsed.ok) return fail(parsed.error);
 
-  const proof = await storeOfferProof(profile.id, formData.get("file"));
-  if (proof && "error" in proof) return fail(proof.error);
-
-  await db.offer.create({ data: { candidateId: profile.id, ...parsed.data, documentId: proof?.id ?? null } });
+  await db.offer.create({ data: { candidateId: profile.id, ...parsed.data } });
   refresh();
-  return done("Offer added.");
+  return done("Offer added. Attach the offer letter so Readyhire can verify it.");
 }
 
 const offerUpdateSchema = z.object({
@@ -199,20 +156,11 @@ export async function updateOffer(_: ActionState, formData: FormData): Promise<A
   if (!parsed.ok) return fail(parsed.error);
   const { offerId, status, joiningDate } = parsed.data;
 
-  const offer = await db.offer.findFirst({ where: { id: offerId, candidateId: profile.id }, include: { document: true } });
-  if (!offer) return fail("Offer not found.");
-
-  const proof = await storeOfferProof(profile.id, formData.get("file"));
-  if (proof && "error" in proof) return fail(proof.error);
-
-  await db.offer.update({
-    where: { id: offer.id },
-    data: { status, joiningDate, ...(proof ? { documentId: proof.id } : {}) },
+  const { count } = await db.offer.updateMany({
+    where: { id: offerId, candidateId: profile.id },
+    data: { status, joiningDate },
   });
-  if (proof && offer.document) {
-    await db.document.delete({ where: { id: offer.document.id } });
-    await deleteStoredFile(offer.document.storedName);
-  }
+  if (count === 0) return fail("Offer not found.");
   refresh();
   return done("Offer updated.");
 }
@@ -248,6 +196,7 @@ export async function applyToJob(_: ActionState, formData: FormData): Promise<Ac
     await logEvent(tx, created.id, user.id, "APPLIED", coverNote);
     return created;
   });
+  notify.applicationReceived(application.id);
   redirect(`/candidate/applications/${application.id}`);
 }
 
@@ -282,6 +231,7 @@ export async function commitToApplication(_: ActionState, formData: FormData): P
     }
     throw error;
   }
+  notify.candidateUpdate(application.id, "committed");
   refresh();
   return done("You're committed to this role. The recruiter can see your commitment.");
 }
@@ -300,6 +250,7 @@ export async function releaseCommitment(_: ActionState, formData: FormData): Pro
     });
     await logEvent(tx, applicationId, user.id, "COMMITMENT_RELEASED", parsed.data.reason);
   });
+  notify.candidateUpdate(applicationId, "released", parsed.data.reason);
   refresh();
   return done("Commitment released. Releases are visible to recruiters.");
 }
@@ -336,6 +287,7 @@ export async function withdrawApplication(_: ActionState, formData: FormData): P
     });
     await logEvent(tx, application.id, user.id, "WITHDRAWN", reason);
   });
+  notify.candidateUpdate(application.id, "withdrew", reason);
   refresh();
   return done("Application withdrawn.");
 }

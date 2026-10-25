@@ -10,6 +10,10 @@ export function TermsCheckbox({ points }: { points: string[] }) {
           <Link href="/terms" target="_blank" className="font-medium text-brand-700 hover:underline">
             Readyhire terms &amp; platform rules
           </Link>
+ and the{" "}
+          <Link href="/privacy" target="_blank" className="font-medium text-brand-700 hover:underline">
+            privacy notice
+          </Link>
           , including:
           <ul className="mt-1 list-disc space-y-0.5 pl-5 text-slate-600">
             {points.map((p) => (

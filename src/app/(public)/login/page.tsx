@@ -4,6 +4,7 @@ import { login } from "@/actions/auth";
 import { ActionForm } from "@/components/action-form";
 import { Field, inputClass } from "@/components/ui";
 import { redirectIfSignedIn } from "@/lib/auth";
+import { env } from "@/lib/env";
 
 export const metadata: Metadata = { title: "Sign in" };
 
@@ -21,7 +22,7 @@ const demoAccounts = [
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   await redirectIfSignedIn();
   const { next } = await searchParams;
-  const showDemo = process.env.NODE_ENV !== "production" || process.env.SHOW_DEMO_ACCOUNTS === "true";
+  const showDemo = env.APP_ENV === "development" || env.APP_ENV === "test" || env.SHOW_DEMO_ACCOUNTS;
 
   return (
     <div className="mx-auto grid max-w-5xl gap-8 px-4 py-12 sm:px-6 md:grid-cols-[1fr_minmax(0,22rem)]">
@@ -38,7 +39,15 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           <Field label="Email" htmlFor="email">
             <input id="email" name="email" type="email" autoComplete="email" required className={inputClass} />
           </Field>
-          <Field label="Password" htmlFor="password">
+          <Field
+            label="Password"
+            htmlFor="password"
+            hint={
+              <Link href="/forgot-password" className="text-brand-700 hover:underline">
+                Forgot your password?
+              </Link>
+            }
+          >
             <input
               id="password"
               name="password"

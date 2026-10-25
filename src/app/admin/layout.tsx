@@ -22,6 +22,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
         { href: "/admin/applications", label: "Applications" },
         { href: "/admin/reports", label: "Ghosting reports", count: openReports },
         { href: "/admin/users", label: "Users" },
+        { href: "/admin/audit", label: "Audit log" },
       ]}
     >
       {children}

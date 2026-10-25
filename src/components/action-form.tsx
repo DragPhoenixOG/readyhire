@@ -17,7 +17,6 @@ type Props = {
   className?: string;
   /** Extra buttons rendered next to the submit button. */
   extraActions?: ReactNode;
-  encType?: "multipart/form-data";
 };
 
 /**
@@ -35,7 +34,6 @@ export function ActionForm({
   resetOnSuccess,
   className,
   extraActions,
-  encType,
 }: Props) {
   const [state, formAction, pending] = useActionState(action, {});
   const formRef = useRef<HTMLFormElement>(null);
@@ -64,7 +62,6 @@ export function ActionForm({
       ref={formRef}
       onSubmit={onSubmit}
       onChange={() => setDismissed(true)}
-      encType={encType}
       className={cx("space-y-4", className)}
     >
       {children}
