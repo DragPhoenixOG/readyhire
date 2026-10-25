@@ -29,6 +29,8 @@ export default async function AdminApplicationsPage({ searchParams }: PageProps<
         },
       },
       candidate: { include: { user: { select: { name: true } } } },
+      // The offer message, when there is one, is the recruiter's latest reply.
+      events: { where: { type: "OFFERED" }, orderBy: { createdAt: "desc" }, take: 1 },
     },
     orderBy: { createdAt: "desc" },
     take: 200,
@@ -99,7 +101,7 @@ export default async function AdminApplicationsPage({ searchParams }: PageProps<
                     <p className="line-clamp-2 text-xs text-slate-600">
                       {a.status === "REJECTED"
                         ? `${a.rejectionCategory}: ${a.rejectionReason}`
-                        : (a.responseMessage ?? "—")}
+                        : (a.events[0]?.message ?? a.responseMessage ?? "—")}
                     </p>
                   </Td>
                 </tr>

@@ -264,3 +264,11 @@ test("after an offer, the candidate sees the recruiter's offer message as the la
   await expect(vikram.getByText("Offer released at 31 LPA, joining in 10 days.").first()).toBeVisible();
   await expect(response.getByText("Great AKS background")).toHaveCount(0);
 });
+
+test("admins see the recruiter's latest reply (the offer message) on the applications page", async ({ browser }) => {
+  const admin = await signIn(browser, "admin@readyhire.in");
+  await admin.goto("/admin/applications?status=OFFERED");
+  const row = admin.getByRole("row").filter({ hasText: "Vikram Singh" });
+  await expect(row).toContainText("Offer released at 31 LPA");
+  await expect(row).not.toContainText("Great AKS background");
+});
