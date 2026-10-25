@@ -14,6 +14,11 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Prisma client output
     "src/generated/**",
+    // Test output and local data
+    "playwright-report/**",
+    "test-results/**",
+    "storage/**",
+    "storage-e2e/**",
   ]),
 ]);
 

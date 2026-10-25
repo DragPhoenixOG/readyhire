@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { logout } from "@/actions/auth";
+import { AutoRefresh } from "@/components/auto-refresh";
 import { Logo } from "@/components/logo";
 import { NavLinks, type NavItem } from "@/components/nav-links";
 import { Badge, buttonClass } from "@/components/ui";
@@ -22,6 +23,7 @@ export function AppShell({
 }) {
   return (
     <div className="flex min-h-screen flex-col">
+      <AutoRefresh />
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 pt-3 sm:px-6">
           <div className="flex items-center gap-3">

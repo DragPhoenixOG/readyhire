@@ -233,3 +233,21 @@ test("pages are served with a nonce-based content security policy", async ({ req
   expect(csp).toContain("frame-ancestors 'self'");
   expect(response.headers()["x-content-type-options"]).toBe("nosniff");
 });
+
+test("an open application page shows the recruiter's response without a reload", async ({ browser }) => {
+  const karthik = await signIn(browser, "karthik.iyer@example.com");
+  await karthik.goto("/candidate/applications");
+  await karthik.getByRole("link", { name: "Frontend Engineer (React)" }).click();
+  await expect(karthik.getByText("Awaiting response").first()).toBeVisible();
+
+  const arjun = await signIn(browser, "arjun.rao@contoso.com");
+  await arjun.goto("/recruiter/applications?tab=response");
+  await arjun.getByRole("row").filter({ hasText: "Karthik Iyer" }).getByRole("link").click();
+  await arjun.getByLabel("Message to the candidate").fill("Your design-system work stands out — let's talk this week.");
+  await arjun.getByRole("button", { name: "Accept application" }).click();
+  await expect(arjun.getByRole("heading", { name: "Next step" })).toBeVisible();
+
+  // Returning to the tab refreshes immediately; otherwise the page polls every 20 seconds.
+  await karthik.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect(karthik.getByText("Your design-system work stands out").first()).toBeVisible({ timeout: 25_000 });
+});
