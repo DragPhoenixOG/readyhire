@@ -251,3 +251,16 @@ test("an open application page shows the recruiter's response without a reload",
   await karthik.evaluate(() => window.dispatchEvent(new Event("focus")));
   await expect(karthik.getByText("Your design-system work stands out").first()).toBeVisible({ timeout: 25_000 });
 });
+
+test("after an offer, the candidate sees the recruiter's offer message as the latest response", async ({ browser }) => {
+  const vikram = await signIn(browser, "vikram.singh@example.com");
+  await vikram.goto("/candidate/applications");
+  await expect(vikram.getByRole("row").filter({ hasText: "Cloud DevOps Engineer" })).toContainText(
+    "Offer released at 31 LPA",
+  );
+  await vikram.getByRole("link", { name: "Cloud DevOps Engineer" }).click();
+  const response = vikram.getByRole("region").filter({ hasText: "Recruiter response" });
+  await expect(vikram.getByText(/^Offer extended /)).toBeVisible();
+  await expect(vikram.getByText("Offer released at 31 LPA, joining in 10 days.").first()).toBeVisible();
+  await expect(response.getByText("Great AKS background")).toHaveCount(0);
+});

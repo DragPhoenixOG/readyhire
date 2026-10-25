@@ -19,6 +19,7 @@ export default async function CandidateApplicationsPage() {
         orderBy: { scheduledAt: "asc" },
         take: 1,
       },
+      events: { where: { type: "OFFERED" }, orderBy: { createdAt: "desc" }, take: 1 },
     },
     orderBy: { updatedAt: "desc" },
   });
@@ -61,7 +62,7 @@ export default async function CandidateApplicationsPage() {
                       ? "Waiting for response"
                       : a.status === "REJECTED"
                         ? a.rejectionReason
-                        : (a.responseMessage ?? "—")}
+                        : (a.events[0]?.message ?? a.responseMessage ?? "—")}
                   </p>
                 </Td>
                 <Td className="text-xs whitespace-nowrap">
