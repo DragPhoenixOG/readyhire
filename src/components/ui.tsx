@@ -251,6 +251,7 @@ export function DescriptionList({ items }: { items: { label: string; value: Reac
 export function Table({
   head,
   columns,
+  evenSpacing,
   minWidth,
   children,
 }: {
@@ -260,13 +261,46 @@ export function Table({
    * proportions whatever the rows contain, instead of resizing to their content.
    */
   columns?: string[];
+  /**
+   * Size each column to its content and share the remaining width equally between columns, so the gaps between
+   * columns are all the same. Laid out as a grid (with table roles kept for assistive technology).
+   */
+  evenSpacing?: boolean;
   /** Minimum table width (e.g. "min-w-[960px]"); narrower screens scroll instead of squeezing the columns. */
   minWidth?: string;
   children: ReactNode;
 }) {
+  const headCell = "px-3 py-2 text-left text-xs font-medium tracking-wide whitespace-nowrap text-slate-500 uppercase";
+  if (evenSpacing) {
+    return (
+      <div className="overflow-x-auto">
+        <table
+          role="table"
+          className={cx(
+            "grid w-full justify-between text-sm [&_td]:border-t [&_td]:border-slate-100 [&_th]:border-b [&_th]:border-slate-200 [&_tr:first-child>td]:border-t-0",
+            minWidth,
+          )}
+          style={{ gridTemplateColumns: `repeat(${head.length}, auto)` }}
+        >
+          <thead role="rowgroup" className="contents">
+            <tr role="row" className="contents">
+              {head.map((h, i) => (
+                <th key={i} scope="col" role="columnheader" className={headCell}>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody role="rowgroup" className="contents [&>tr]:contents">
+            {children}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
   return (
     <div className="overflow-x-auto">
-      <table className={cx("min-w-full divide-y divide-slate-200 text-sm", columns && "table-fixed", minWidth)}>
+      <table className={cx("min-w-full divide-y divide-slate-200 text-sm", columns && "w-full table-fixed", minWidth)}>
         {columns && (
           <colgroup>
             {columns.map((width, i) => (
@@ -277,11 +311,7 @@ export function Table({
         <thead>
           <tr>
             {head.map((h, i) => (
-              <th
-                key={i}
-                scope="col"
-                className="px-3 py-2 text-left text-xs font-medium tracking-wide whitespace-nowrap text-slate-500 uppercase"
-              >
+              <th key={i} scope="col" className={headCell}>
                 {h}
               </th>
             ))}
@@ -294,7 +324,11 @@ export function Table({
 }
 
 export function Td({ children, className }: { children?: ReactNode; className?: string }) {
-  return <td className={cx("px-3 py-2.5 align-top text-slate-700", className)}>{children}</td>;
+  return (
+    <td role="cell" className={cx("px-3 py-2.5 align-top text-slate-700", className)}>
+      {children}
+    </td>
+  );
 }
 
 export const fileInputClass =
