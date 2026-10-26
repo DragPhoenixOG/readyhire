@@ -92,11 +92,21 @@ const toneClass: Record<Tone, string> = {
   violet: "bg-violet-50 text-violet-800 ring-violet-200",
 };
 
-export function Badge({ tone = "neutral", children }: { tone?: Tone; children: ReactNode }) {
+export function Badge({
+  tone = "neutral",
+  wrap,
+  children,
+}: {
+  tone?: Tone;
+  /** Let long text wrap instead of keeping the badge on one line. */
+  wrap?: boolean;
+  children: ReactNode;
+}) {
   return (
     <span
       className={cx(
-        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ring-1 ring-inset",
+        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset",
+        wrap ? "rounded-lg" : "whitespace-nowrap",
         toneClass[tone],
       )}
     >
