@@ -266,7 +266,7 @@ export function Table({
 }) {
   return (
     <div className="overflow-x-auto">
-      <table className={cx("min-w-full divide-y divide-slate-200 text-sm", columns && "table-fixed", minWidth)}>
+      <table className={cx("min-w-full divide-y divide-slate-200 text-sm", columns && "w-full table-fixed", minWidth)}>
         {columns && (
           <colgroup>
             {columns.map((width, i) => (

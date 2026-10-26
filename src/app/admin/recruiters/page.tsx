@@ -41,7 +41,7 @@ export default async function AdminRecruitersPage() {
         <Card bodyClassName="px-2 py-2">
           <Table
             head={["Recruiter", "Company & domain", "Domain check", "Signed up", "Jobs", "Status", "Decision"]}
-            columns={["w-[24%]", "w-[16%]", "w-[13%]", "w-[10.5%]", "w-[5.5%]", "w-[13%]", "w-[18%]"]}
+            columns={Array(7).fill("w-1/7")}
             minWidth="min-w-[960px]"
           >
             {sorted.map((r) => {
@@ -89,7 +89,7 @@ export default async function AdminRecruitersPage() {
                     {r.approvalStatus === "PENDING" ? (
                       <ActionForm action={decideRecruiter} submitLabel="Save" size="sm" className="space-y-2">
                         <input type="hidden" name="recruiterId" value={r.id} />
-                        <div className="flex gap-3 text-sm">
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
                           <label className="flex items-center gap-1.5">
                             <input
                               type="radio"
@@ -107,15 +107,15 @@ export default async function AdminRecruitersPage() {
                         </div>
                         <input
                           name="note"
-                          placeholder="Note, if rejecting"
+                          placeholder="Reject reason"
                           aria-label="Decision note"
                           className={inputClass}
                         />
                       </ActionForm>
                     ) : (
                       // Decisions are final: show the one recorded, read-only.
-                      <fieldset disabled className="space-y-2" aria-label="Decision (recorded)">
-                        <div className="flex gap-3 text-sm text-slate-500">
+                      <fieldset disabled className="min-w-0 space-y-2" aria-label="Decision (recorded)">
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-slate-500">
                           <label className="flex items-center gap-1.5">
                             <input
                               type="radio"
