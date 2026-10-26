@@ -248,10 +248,32 @@ export function DescriptionList({ items }: { items: { label: string; value: Reac
   );
 }
 
-export function Table({ head, children }: { head: ReactNode[]; children: ReactNode }) {
+export function Table({
+  head,
+  columns,
+  minWidth,
+  children,
+}: {
+  head: ReactNode[];
+  /**
+   * Fixed column widths (Tailwind classes such as "w-[24%]"), one per heading. Columns then keep the same
+   * proportions whatever the rows contain, instead of resizing to their content.
+   */
+  columns?: string[];
+  /** Minimum table width (e.g. "min-w-[960px]"); narrower screens scroll instead of squeezing the columns. */
+  minWidth?: string;
+  children: ReactNode;
+}) {
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-slate-200 text-sm">
+      <table className={cx("min-w-full divide-y divide-slate-200 text-sm", columns && "table-fixed", minWidth)}>
+        {columns && (
+          <colgroup>
+            {columns.map((width, i) => (
+              <col key={i} className={width} />
+            ))}
+          </colgroup>
+        )}
         <thead>
           <tr>
             {head.map((h, i) => (

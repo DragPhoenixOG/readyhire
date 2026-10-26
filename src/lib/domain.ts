@@ -1,7 +1,7 @@
 import { FREE_EMAIL_DOMAINS } from "@/lib/constants";
 
 /** Returns the bare host for a website the recruiter typed, or null when it isn't a valid URL. */
-function websiteHost(website: string) {
+export function websiteHost(website: string) {
   try {
     const url = new URL(/^https?:\/\//i.test(website) ? website : `https://${website}`);
     return url.hostname.toLowerCase().replace(/^www\./, "");
