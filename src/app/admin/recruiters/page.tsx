@@ -41,13 +41,13 @@ export default async function AdminRecruitersPage() {
         <Card bodyClassName="px-2 py-2">
           <Table
             head={["Recruiter", "Company & domain", "Domain check", "Signed up", "Jobs", "Status", "Decision"]}
-            columns={Array(7).fill("w-1/7")}
+            evenSpacing
             minWidth="min-w-[960px]"
           >
             {sorted.map((r) => {
               const domainIssue = checkRecruiterDomain(r.user.email, r.company.website);
               return (
-                <tr key={r.id}>
+                <tr key={r.id} role="row">
                   <Td>
                     <p className="font-medium text-slate-900">{r.user.name}</p>
                     {/* Long addresses break after the @ first, and anywhere only if that isn't enough. */}
