@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { decideRecruiter } from "@/actions/admin";
 import { ActionForm } from "@/components/action-form";
 import { ApprovalBadge } from "@/components/status";
-import { Badge, Card, EmptyState, PageHeader, Table, Td, inputClass } from "@/components/ui";
+import { Badge, Card, EmptyState, PageHeader, Table, Td, buttonClass, inputClass } from "@/components/ui";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { checkRecruiterDomain } from "@/lib/domain";
@@ -17,6 +17,7 @@ export default async function AdminRecruitersPage() {
       user: {
         select: { name: true, email: true, status: true, flagged: true },
       },
+      reviewedBy: { select: { name: true } },
       company: true,
       _count: { select: { jobs: true } },
     },
@@ -66,44 +67,66 @@ export default async function AdminRecruitersPage() {
                     {r.reviewNote && <p className="mt-1 max-w-48 text-xs text-slate-500">{r.reviewNote}</p>}
                   </Td>
                   <Td className="min-w-64">
-                    <ActionForm
-                      action={decideRecruiter}
-                      submitLabel="Save"
-                      size="sm"
-                      variant={r.approvalStatus === "PENDING" ? "primary" : "secondary"}
-                      className="space-y-2"
-                    >
-                      <input type="hidden" name="recruiterId" value={r.id} />
-                      <div className="flex gap-3 text-sm">
-                        <label className="flex items-center gap-1.5">
-                          <input
-                            type="radio"
-                            name="decision"
-                            value="APPROVED"
-                            required
-                            defaultChecked={r.approvalStatus === "APPROVED"}
-                            className="accent-brand-700"
-                          />
-                          Approve
-                        </label>
-                        <label className="flex items-center gap-1.5">
-                          <input
-                            type="radio"
-                            name="decision"
-                            value="REJECTED"
-                            defaultChecked={r.approvalStatus === "REJECTED"}
-                            className="accent-rose-600"
-                          />
-                          Reject
-                        </label>
-                      </div>
-                      <input
-                        name="note"
-                        placeholder="Note (required to reject)"
-                        aria-label="Decision note"
-                        className={inputClass}
-                      />
-                    </ActionForm>
+                    {r.approvalStatus === "PENDING" ? (
+                      <ActionForm action={decideRecruiter} submitLabel="Save" size="sm" className="space-y-2">
+                        <input type="hidden" name="recruiterId" value={r.id} />
+                        <div className="flex gap-3 text-sm">
+                          <label className="flex items-center gap-1.5">
+                            <input
+                              type="radio"
+                              name="decision"
+                              value="APPROVED"
+                              required
+                              className="accent-brand-700"
+                            />
+                            Approve
+                          </label>
+                          <label className="flex items-center gap-1.5">
+                            <input type="radio" name="decision" value="REJECTED" className="accent-rose-600" />
+                            Reject
+                          </label>
+                        </div>
+                        <input
+                          name="note"
+                          placeholder="Note (required to reject)"
+                          aria-label="Decision note"
+                          className={inputClass}
+                        />
+                      </ActionForm>
+                    ) : (
+                      // Decisions are final: show the one recorded, read-only.
+                      <fieldset disabled className="space-y-2" aria-label="Decision (recorded)">
+                        <div className="flex gap-3 text-sm text-slate-500">
+                          <label className="flex items-center gap-1.5">
+                            <input
+                              type="radio"
+                              checked={r.approvalStatus === "APPROVED"}
+                              readOnly
+                              className="accent-brand-700"
+                            />
+                            Approve
+                          </label>
+                          <label className="flex items-center gap-1.5">
+                            <input
+                              type="radio"
+                              checked={r.approvalStatus === "REJECTED"}
+                              readOnly
+                              className="accent-rose-600"
+                            />
+                            Reject
+                          </label>
+                        </div>
+                        {r.reviewedAt && (
+                          <p className="text-xs text-slate-500">
+                            Decided {formatDate(r.reviewedAt)}
+                            {r.reviewedBy && ` by ${r.reviewedBy.name}`}
+                          </p>
+                        )}
+                        <button type="button" className={buttonClass("secondary", "sm")}>
+                          Save
+                        </button>
+                      </fieldset>
+                    )}
                   </Td>
                 </tr>
               );
