@@ -44,9 +44,9 @@ export default async function AdminRecruitersPage() {
               const domainIssue = checkRecruiterDomain(r.user.email, r.company.website);
               return (
                 <tr key={r.id}>
-                  <Td>
+                  <Td className="min-w-44">
                     <p className="font-medium text-slate-900">{r.user.name}</p>
-                    <p className="text-xs text-slate-500">{r.user.email}</p>
+                    <p className="text-xs wrap-anywhere text-slate-500">{r.user.email}</p>
                     <p className="text-xs text-slate-500">{r.title}</p>
                     {r.user.status === "RESTRICTED" && <Badge tone="red">Restricted</Badge>}
                   </Td>
@@ -58,7 +58,15 @@ export default async function AdminRecruitersPage() {
                     </p>
                   </Td>
                   <Td>
-                    {domainIssue ? <Badge tone="red">{domainIssue}</Badge> : <Badge tone="green">Company domain</Badge>}
+                    {domainIssue ? (
+                      <span className="block max-w-56">
+                        <Badge tone="red" wrap>
+                          {domainIssue}
+                        </Badge>
+                      </span>
+                    ) : (
+                      <Badge tone="green">Company domain</Badge>
+                    )}
                   </Td>
                   <Td className="whitespace-nowrap">{formatDate(r.createdAt)}</Td>
                   <Td>{r._count.jobs}</Td>
@@ -66,7 +74,7 @@ export default async function AdminRecruitersPage() {
                     <ApprovalBadge status={r.approvalStatus} />
                     {r.reviewNote && <p className="mt-1 max-w-48 text-xs text-slate-500">{r.reviewNote}</p>}
                   </Td>
-                  <Td className="min-w-64">
+                  <Td className="w-52 min-w-52">
                     {r.approvalStatus === "PENDING" ? (
                       <ActionForm action={decideRecruiter} submitLabel="Save" size="sm" className="space-y-2">
                         <input type="hidden" name="recruiterId" value={r.id} />
