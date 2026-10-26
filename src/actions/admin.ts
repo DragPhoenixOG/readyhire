@@ -189,9 +189,11 @@ export async function decideRecruiter(_: ActionState, formData: FormData): Promi
   });
   if (!recruiter) return fail("Recruiter not found.");
 
-  await db.$transaction(async (tx) => {
-    await tx.recruiterProfile.update({
-      where: { id: recruiterId },
+  // A recruiter is decided once. The status check is part of the update, so two admins saving at the same
+  // moment can't both record a decision.
+  const decided = await db.$transaction(async (tx) => {
+    const { count } = await tx.recruiterProfile.updateMany({
+      where: { id: recruiterId, approvalStatus: "PENDING" },
       data: {
         approvalStatus: decision,
         reviewNote: note,
@@ -199,9 +201,13 @@ export async function decideRecruiter(_: ActionState, formData: FormData): Promi
         reviewedById: admin.id,
       },
     });
+    if (count === 0) return false;
     await audit(admin.id, `RECRUITER_${decision}`, "RecruiterProfile", recruiterId, note ?? decision.toLowerCase(), tx);
+    return true;
   });
-  if (decision !== recruiter.approvalStatus) notify.recruiterDecision(recruiterId);
+  // No refresh here: it would replace this form, and the message with it, by the recorded decision.
+  if (!decided) return fail("This recruiter has already been approved or rejected. Reload to see the decision.");
+  notify.recruiterDecision(recruiterId);
   refresh();
   return done(decision === "APPROVED" ? "Recruiter approved." : "Recruiter rejected.");
 }
