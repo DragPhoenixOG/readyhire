@@ -21,6 +21,10 @@ export function createS3Store(): DocumentStore {
     region: env.S3_REGION,
     endpoint: env.S3_ENDPOINT,
     forcePathStyle: env.S3_FORCE_PATH_STYLE,
+    // Newer SDKs add a CRC32 checksum to every request. In a pre-signed upload URL that is the checksum of an
+    // empty body, so the bucket would reject the real file; only send checksums when the API requires them.
+    requestChecksumCalculation: "WHEN_REQUIRED",
+    responseChecksumValidation: "WHEN_REQUIRED",
     credentials: { accessKeyId: env.S3_ACCESS_KEY_ID!, secretAccessKey: env.S3_SECRET_ACCESS_KEY! },
   });
   const Bucket = env.S3_BUCKET!;

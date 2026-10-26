@@ -8,13 +8,16 @@ const AREA_ROLE: [prefix: string, role: SessionRole][] = [
 ];
 
 /** Origin of the document bucket, which the browser talks to directly for uploads and previews. */
-function storageOrigin() {
-  if (process.env.STORAGE_DRIVER !== "s3") return "";
-  if (process.env.S3_ENDPOINT) return new URL(process.env.S3_ENDPOINT).origin;
-  const region = process.env.S3_REGION || "ap-south-1";
-  return process.env.S3_FORCE_PATH_STYLE === "true"
-    ? `https://s3.${region}.amazonaws.com`
-    : `https://${process.env.S3_BUCKET}.s3.${region}.amazonaws.com`;
+export function storageOrigin(vars: Record<string, string | undefined> = process.env) {
+  if (vars.STORAGE_DRIVER !== "s3") return "";
+  const pathStyle = vars.S3_FORCE_PATH_STYLE === "true";
+  if (vars.S3_ENDPOINT) {
+    // Without path-style addressing the SDK puts the bucket in the host name, as it does for AWS.
+    const endpoint = new URL(vars.S3_ENDPOINT);
+    return pathStyle ? endpoint.origin : `${endpoint.protocol}//${vars.S3_BUCKET}.${endpoint.host}`;
+  }
+  const region = vars.S3_REGION || "ap-south-1";
+  return pathStyle ? `https://s3.${region}.amazonaws.com` : `https://${vars.S3_BUCKET}.s3.${region}.amazonaws.com`;
 }
 
 function securityHeaders(nonce: string) {

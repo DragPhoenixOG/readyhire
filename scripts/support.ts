@@ -26,6 +26,10 @@ export function createScriptStore() {
       region: process.env.S3_REGION ?? "ap-south-1",
       endpoint: process.env.S3_ENDPOINT || undefined,
       forcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true",
+      // Newer SDKs add a CRC32 checksum to every request. In a pre-signed upload URL that is the checksum of an
+      // empty body, so the bucket would reject the real file; only send checksums when the API requires them.
+      requestChecksumCalculation: "WHEN_REQUIRED",
+      responseChecksumValidation: "WHEN_REQUIRED",
       credentials: {
         accessKeyId: process.env.S3_ACCESS_KEY_ID!,
         secretAccessKey: process.env.S3_SECRET_ACCESS_KEY!,

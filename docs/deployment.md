@@ -25,7 +25,7 @@ The repository is currently configured for this cheaper setup, to get real users
 | --------- | ------------------------------------------ | ------------------------------------------------------------------ |
 | App       | **Vercel Hobby**, functions in Singapore   | Free, but not for commercial use; cron jobs run at most once a day |
 | Database  | **Neon**, AWS Singapore (`ap-southeast-1`) | Free tier; same region as the functions so queries stay fast       |
-| Documents | **AWS S3**, Mumbai (`ap-south-1`), private | As in step 2 below; CORS origin is your `*.vercel.app` URL         |
+| Documents | **Cloudflare R2**, Asia-Pacific, private   | Free up to 10 GB with no download fees; same S3 API as AWS         |
 | Email     | **Gmail SMTP** with an app password        | Sends to anyone without owning a domain; about 500 emails a day    |
 | Domain    | `<project>.vercel.app`                     | Add your own domain later (step 4.4)                               |
 
@@ -33,6 +33,13 @@ Differences from the steps below:
 
 - **Database:** create a separate Neon project for production (never reuse the development database). Use the
   **pooled** connection string (host contains `-pooler`) for `DATABASE_URL` and the direct one for `DIRECT_URL`.
+- **Documents (Cloudflare R2):** in the Cloudflare dashboard open **R2** (activating it may ask for a card; nothing
+  is charged within the free tier) → **Create bucket**, location hint **Asia-Pacific**. In the bucket's **Settings →
+  CORS policy**, add the same rule as step 2 with your `https://<project>.vercel.app` origin. Then **R2 → Manage API
+  tokens → Create API token** with **Object Read & Write** on that bucket only. Set `STORAGE_DRIVER=s3`,
+  `S3_BUCKET=<bucket>`, `S3_REGION=auto`, `S3_ENDPOINT=https://<account id>.r2.cloudflarestorage.com` and the token's
+  `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY`. To move to AWS later, copy the objects across (for example with
+  `rclone sync`) and change these variables; nothing in the database changes.
 - **Email:** turn on 2-Step Verification for the Google account, create an app password
   (Google Account → Security → App passwords), then set `EMAIL_DRIVER=smtp`,
   `SMTP_URL=smtps://you%40gmail.com:<app password without spaces>@smtp.gmail.com:465` (the `@` in the address is
