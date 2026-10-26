@@ -1,21 +1,21 @@
 import {
   Bone,
+  DetailPageSkeleton,
   SkeletonButton,
   SkeletonCard,
+  SkeletonChips,
   SkeletonField,
-  SkeletonHeader,
   SkeletonLines,
-  SkeletonList,
-  SkeletonPage,
-  SkeletonSignals,
+  SkeletonListCard,
+  SkeletonSignalsCard,
 } from "@/components/skeletons";
 
 export default function Loading() {
   return (
-    <SkeletonPage>
-      <SkeletonHeader back badge />
-      <div className="grid gap-6 lg:grid-cols-[1fr_minmax(0,22rem)]">
-        <div className="space-y-6">
+    <DetailPageSkeleton
+      badge
+      main={
+        <>
           <SkeletonCard description>
             <div className="space-y-4">
               <Bone className="h-10 w-full rounded-lg" />
@@ -23,29 +23,22 @@ export default function Loading() {
               <SkeletonButton className="w-44" />
             </div>
           </SkeletonCard>
-          <SkeletonCard>
-            <SkeletonList rows={2} />
-          </SkeletonCard>
-          <SkeletonCard>
-            <SkeletonList rows={4} />
-          </SkeletonCard>
-        </div>
-        <div className="space-y-6">
-          <SkeletonCard>
-            <SkeletonSignals />
-          </SkeletonCard>
+          <SkeletonListCard rows={2} />
+          <SkeletonListCard rows={4} />
+        </>
+      }
+      side={
+        <>
+          <SkeletonSignalsCard />
           <SkeletonCard>
             <div className="space-y-3">
               <Bone className="h-4 w-48" />
               <SkeletonLines count={2} />
-              <div className="flex gap-2">
-                <Bone className="h-6 w-16 rounded-full" />
-                <Bone className="h-6 w-20 rounded-full" />
-              </div>
+              <SkeletonChips />
             </div>
           </SkeletonCard>
-        </div>
-      </div>
-    </SkeletonPage>
+        </>
+      }
+    />
   );
 }

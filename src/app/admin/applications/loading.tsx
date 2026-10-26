@@ -1,11 +1,5 @@
-import { SkeletonHeader, SkeletonPage, SkeletonTable, SkeletonTabs } from "@/components/skeletons";
+import { ListPageSkeleton } from "@/components/skeletons";
 
 export default function Loading() {
-  return (
-    <SkeletonPage>
-      <SkeletonHeader />
-      <SkeletonTabs count={9} />
-      <SkeletonTable columns={7} />
-    </SkeletonPage>
-  );
+  return <ListPageSkeleton columns={7} tabs={9} />;
 }

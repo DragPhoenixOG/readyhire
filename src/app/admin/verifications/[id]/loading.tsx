@@ -1,22 +1,22 @@
 import {
   Bone,
+  DetailPageSkeleton,
   SkeletonButton,
   SkeletonCard,
   SkeletonDescriptionList,
   SkeletonField,
-  SkeletonHeader,
   SkeletonLines,
-  SkeletonList,
-  SkeletonPage,
-  SkeletonSignals,
+  SkeletonListCard,
+  SkeletonSignalsCard,
 } from "@/components/skeletons";
 
 export default function Loading() {
   return (
-    <SkeletonPage>
-      <SkeletonHeader back badge />
-      <div className="grid gap-6 lg:grid-cols-[1fr_minmax(0,24rem)]">
-        <div className="space-y-6">
+    <DetailPageSkeleton
+      badge
+      sidebar="24rem"
+      main={
+        <>
           <SkeletonCard description>
             <SkeletonDescriptionList items={7} />
           </SkeletonCard>
@@ -33,11 +33,11 @@ export default function Loading() {
               ))}
             </ul>
           </SkeletonCard>
-          <SkeletonCard description>
-            <SkeletonList rows={2} />
-          </SkeletonCard>
-        </div>
-        <div className="space-y-6">
+          <SkeletonListCard rows={2} description />
+        </>
+      }
+      side={
+        <>
           <SkeletonCard>
             <div className="space-y-4">
               <SkeletonLines count={3} />
@@ -50,11 +50,9 @@ export default function Loading() {
               <SkeletonButton className="w-48" />
             </div>
           </SkeletonCard>
-          <SkeletonCard>
-            <SkeletonSignals />
-          </SkeletonCard>
-        </div>
-      </div>
-    </SkeletonPage>
+          <SkeletonSignalsCard />
+        </>
+      }
+    />
   );
 }

@@ -1,14 +1,5 @@
-import { SkeletonHeader, SkeletonPage, SkeletonSearch, SkeletonTable, SkeletonTabs } from "@/components/skeletons";
+import { ListPageSkeleton } from "@/components/skeletons";
 
 export default function Loading() {
-  return (
-    <SkeletonPage>
-      <SkeletonHeader />
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <SkeletonTabs count={5} className="" />
-        <SkeletonSearch inputs={1} className="" />
-      </div>
-      <SkeletonTable columns={5} />
-    </SkeletonPage>
-  );
+  return <ListPageSkeleton columns={5} tabs={5} search={1} />;
 }

@@ -264,3 +264,101 @@ export function SkeletonAccount() {
     </SkeletonPage>
   );
 }
+
+// ─── Page templates, shared by pages with the same shape ───
+
+/** A list page: header, optional status tabs and search, and a table. */
+export function ListPageSkeleton({
+  columns,
+  rows,
+  rowClassName,
+  tabs,
+  search,
+  action,
+}: {
+  columns: number;
+  rows?: number;
+  rowClassName?: string;
+  /** Number of status filter pills. */
+  tabs?: number;
+  /** Number of search inputs (a button is added). */
+  search?: number;
+  /** A button in the header, like "Post a job". */
+  action?: boolean;
+}) {
+  return (
+    <SkeletonPage>
+      <SkeletonHeader action={action} />
+      {(tabs || search) && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          {tabs && <SkeletonTabs count={tabs} className="" />}
+          {search && <SkeletonSearch inputs={search} className="" />}
+        </div>
+      )}
+      <SkeletonTable columns={columns} rows={rows} rowClassName={rowClassName} />
+    </SkeletonPage>
+  );
+}
+
+/** A detail page: back link, title with a status badge, then a main column and a sidebar. */
+export function DetailPageSkeleton({
+  badge,
+  action,
+  sidebar = "22rem",
+  main,
+  side,
+}: {
+  badge?: boolean;
+  action?: boolean;
+  sidebar?: "22rem" | "24rem";
+  main: ReactNode;
+  side: ReactNode;
+}) {
+  const grid = sidebar === "24rem" ? "lg:grid-cols-[1fr_minmax(0,24rem)]" : "lg:grid-cols-[1fr_minmax(0,22rem)]";
+  return (
+    <SkeletonPage>
+      <SkeletonHeader back badge={badge} action={action} />
+      <div className={cx("grid gap-6", grid)}>
+        <div className="space-y-6">{main}</div>
+        <div className="space-y-6">{side}</div>
+      </div>
+    </SkeletonPage>
+  );
+}
+
+/** A dashboard: header, a row of stat cards, then the dashboard's own sections. */
+export function DashboardSkeleton({
+  stats,
+  action,
+  children,
+}: {
+  stats: number;
+  action?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <SkeletonPage>
+      <SkeletonHeader action={action} />
+      <SkeletonStats count={stats} />
+      {children}
+    </SkeletonPage>
+  );
+}
+
+/** A card holding a divided list (interviews, activity, applications…). */
+export function SkeletonListCard({ rows, description }: { rows: number; description?: boolean }) {
+  return (
+    <SkeletonCard description={description}>
+      <SkeletonList rows={rows} />
+    </SkeletonCard>
+  );
+}
+
+/** The "Verified summary" card shown beside candidates. */
+export function SkeletonSignalsCard() {
+  return (
+    <SkeletonCard>
+      <SkeletonSignals />
+    </SkeletonCard>
+  );
+}

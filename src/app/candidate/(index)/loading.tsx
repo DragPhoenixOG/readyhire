@@ -1,25 +1,11 @@
-import {
-  Bone,
-  SkeletonCard,
-  SkeletonHeader,
-  SkeletonLines,
-  SkeletonList,
-  SkeletonPage,
-  SkeletonStats,
-} from "@/components/skeletons";
+import { Bone, DashboardSkeleton, SkeletonCard, SkeletonLines, SkeletonListCard } from "@/components/skeletons";
 
 export default function Loading() {
   return (
-    <SkeletonPage>
-      <SkeletonHeader />
-      <SkeletonStats count={4} />
+    <DashboardSkeleton stats={4}>
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <SkeletonCard>
-          <SkeletonList rows={3} />
-        </SkeletonCard>
-        <SkeletonCard>
-          <SkeletonList rows={3} />
-        </SkeletonCard>
+        <SkeletonListCard rows={3} />
+        <SkeletonListCard rows={3} />
       </div>
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <SkeletonCard description className="lg:col-span-2">
@@ -36,6 +22,6 @@ export default function Loading() {
           <SkeletonLines count={3} />
         </SkeletonCard>
       </div>
-    </SkeletonPage>
+    </DashboardSkeleton>
   );
 }

@@ -1,10 +1,5 @@
-import { SkeletonHeader, SkeletonPage, SkeletonTable } from "@/components/skeletons";
+import { ListPageSkeleton } from "@/components/skeletons";
 
 export default function Loading() {
-  return (
-    <SkeletonPage>
-      <SkeletonHeader />
-      <SkeletonTable columns={7} rows={3} rowClassName="py-8" />
-    </SkeletonPage>
-  );
+  return <ListPageSkeleton columns={7} rows={3} rowClassName="py-8" />;
 }
