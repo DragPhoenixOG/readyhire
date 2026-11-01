@@ -25,8 +25,8 @@
     "db:check": "prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --exit-code"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1156.0",
-    "@aws-sdk/s3-request-presigner": "^3.1156.0",
+    "@aws-sdk/client-s3": "^3.1159.0",
+    "@aws-sdk/s3-request-presigner": "^3.1159.0",
     "@prisma/adapter-pg": "^7.10.1",
     "@prisma/client": "^7.10.1",
     "bcryptjs": "^3.0.3",
