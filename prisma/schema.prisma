@@ -365,9 +365,15 @@ model Application {
   notJoinedReason  String?
   withdrawnReason  String?
 
-  // Response-deadline reminders sent to the recruiter (each at most once).
-  reminderSentAt     DateTime?
-  overdueAlertSentAt DateTime?
+  // Response-deadline reminders sent to the recruiter (each at most once):
+  // 48 hours left, 24 hours left, overdue.
+  earlyReminderSentAt DateTime?
+  reminderSentAt      DateTime?
+  overdueAlertSentAt  DateTime?
+
+  // The recruiter's reply started from an AI draft, and whether it was sent unchanged.
+  responseDraftUsed     Boolean @default(false)
+  responseDraftUnedited Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -431,4 +437,18 @@ model GhostingReport {
 
   @@index([candidateId, status])
   @@index([status])
+}
+
+/// One call to the AI provider, for cost tracking and abuse checks. Holds no prompt or output text.
+model AiRequest {
+  id           String   @id @default(cuid())
+  userId       String?
+  purpose      String // e.g. "response-draft:accept"
+  model        String
+  inputTokens  Int      @default(0)
+  outputTokens Int      @default(0)
+  outcome      String // "ok" | "refused" | "invalid" | "error"
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
 }

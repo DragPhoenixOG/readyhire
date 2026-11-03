@@ -243,11 +243,13 @@ export const emails = {
       },
     ]),
 
-  responseReminder: (recruiterName: string, dueSoon: string[], overdue: string[]) =>
+  responseReminder: (recruiterName: string, early: string[], dueSoon: string[], overdue: string[]) =>
     render(
       overdue.length
         ? `${overdue.length} application(s) overdue for a response`
-        : `${dueSoon.length} application(s) due for a response`,
+        : dueSoon.length
+          ? `${dueSoon.length} application(s) due for a response`
+          : `${early.length} application(s) waiting for your reply`,
       hi(recruiterName),
       [
         ...(overdue.length
@@ -264,6 +266,14 @@ export const emails = {
                 text: "These applications are due for a response within 24 hours:",
               },
               { quote: dueSoon.join("\n") },
+            ]
+          : []),
+        ...(early.length
+          ? [
+              {
+                text: "These applications have about 48 hours left for a response:",
+              },
+              { quote: early.join("\n") },
             ]
           : []),
         {

@@ -3,6 +3,7 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { draftFlags } from "@/lib/ai/draft-token";
 import { requireApprovedRecruiter } from "@/lib/auth";
 import { OPEN_APPLICATION_STATUSES, READYHIRE_ROOMS, REJECTION_CATEGORIES } from "@/lib/constants";
 import { db } from "@/lib/db";
@@ -115,6 +116,7 @@ export async function acceptApplication(_: ActionState, formData: FormData): Pro
   const application = await ownApplication(recruiter.id, applicationId);
   if (!application) return fail("Application not found.");
   if (application.status !== "APPLIED") return fail("You've already responded to this application.");
+  const assisted = await draftFlags(formData.get("draftToken"), application.id, "accept", message);
 
   await db.$transaction(async (tx) => {
     await tx.application.update({
@@ -123,6 +125,7 @@ export async function acceptApplication(_: ActionState, formData: FormData): Pro
         status: "ACCEPTED",
         respondedAt: new Date(),
         responseMessage: message,
+        ...assisted,
       },
     });
     await logEvent(tx, application.id, user.id, "ACCEPTED", message);
@@ -150,6 +153,11 @@ export async function rejectApplication(_: ActionState, formData: FormData): Pro
   const application = await ownApplication(recruiter.id, applicationId);
   if (!application) return fail("Application not found.");
   if (!OPEN_APPLICATION_STATUSES.includes(application.status)) return fail("This application is already closed.");
+  // Drafts are only offered for the first reply, so only a first reply can be marked as assisted.
+  const assisted =
+    application.status === "APPLIED"
+      ? await draftFlags(formData.get("draftToken"), application.id, "reject", reason)
+      : {};
 
   await db.$transaction(async (tx) => {
     await tx.application.update({
@@ -159,6 +167,7 @@ export async function rejectApplication(_: ActionState, formData: FormData): Pro
         respondedAt: application.respondedAt ?? new Date(),
         rejectionCategory: category,
         rejectionReason: reason,
+        ...assisted,
       },
     });
     await tx.interview.updateMany({

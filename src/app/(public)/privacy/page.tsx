@@ -27,6 +27,13 @@ const sections = [
     ],
   },
   {
+    title: "AI-drafted replies",
+    body: [
+      "Recruiters can ask Readyhire to draft a reply to an application. To write the draft we send the job details and the parts of your profile the recruiter can already see (headline, current title, experience, skills, city, verified joining timeline and your note to the recruiter) to our AI provider, Anthropic. Your contact details, documents, resume and other offers are never sent.",
+      "A draft is only a suggestion: the recruiter reviews and edits it, and only the reply they send counts. Readyhire doesn't use AI to screen, score or rank candidates.",
+    ],
+  },
+  {
     title: "Where it's stored",
     body: [
       "Data and documents are stored with our cloud providers in India (Mumbai region) and encrypted at rest. Documents are opened only through short-lived, access-checked links.",

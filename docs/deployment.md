@@ -125,14 +125,15 @@ To use AWS SES or another provider instead: `EMAIL_DRIVER=smtp` and
 2. `vercel.json` pins functions to one region (keep it next to the database) and schedules `/api/cron/reminders`.
 3. **Settings → Environment Variables** — for **Production**:
 
-   | Variable                                       | Value                                                     |
-   | ---------------------------------------------- | --------------------------------------------------------- |
-   | `APP_URL`                                      | `https://readyhire.in`                                    |
-   | `DATABASE_URL`, `DIRECT_URL`                   | from step 1                                               |
-   | `AUTH_SECRET`                                  | 64 random hex characters (see `.env.example`)             |
-   | `CRON_SECRET`                                  | another random string; Vercel Cron sends it automatically |
-   | `STORAGE_DRIVER`, `S3_*`                       | from step 2                                               |
-   | `EMAIL_DRIVER`, `RESEND_API_KEY`, `EMAIL_FROM` | from step 3                                               |
+   | Variable                                       | Value                                                                                        |
+   | ---------------------------------------------- | -------------------------------------------------------------------------------------------- |
+   | `APP_URL`                                      | `https://readyhire.in`                                                                       |
+   | `DATABASE_URL`, `DIRECT_URL`                   | from step 1                                                                                  |
+   | `AUTH_SECRET`                                  | 64 random hex characters (see `.env.example`)                                                |
+   | `CRON_SECRET`                                  | another random string; Vercel Cron sends it automatically                                    |
+   | `STORAGE_DRIVER`, `S3_*`                       | from step 2                                                                                  |
+   | `EMAIL_DRIVER`, `RESEND_API_KEY`, `EMAIL_FROM` | from step 3                                                                                  |
+   | `AI_DRIVER`, `ANTHROPIC_API_KEY` (optional)    | `anthropic` and a Claude API key to turn on AI-drafted replies; leave unset to keep them off |
 
    For **Preview**, use the staging database, bucket and URL. Add `MIGRATE_ON_BUILD=true` if previews should migrate
    the staging database (fine for a single staging database; avoid it if several branches change the schema at once).
@@ -140,6 +141,21 @@ To use AWS SES or another provider instead: `EMAIL_DRIVER=smtp` and
 4. **Settings → Domains**: add your domain. HSTS and `upgrade-insecure-requests` switch on automatically once
    `APP_URL` is https.
 5. Deploy. The app refuses to start with an incomplete production configuration and lists what's missing in the logs.
+
+### AI-drafted replies (optional)
+
+Recruiters get a **Draft with AI** button on applications waiting for a reply once `AI_DRIVER=anthropic` and
+`ANTHROPIC_API_KEY` are set (create the key at [platform.claude.com](https://platform.claude.com)). Drafts use
+`claude-opus-5-5` at `low` effort by default (`AI_MODEL`, `AI_EFFORT` override them), cost roughly US$0.02 each, and
+every call is recorded in the `AiRequest` table (tokens and outcome, never text) so spend can be checked:
+
+```sql
+SELECT date_trunc('day', "createdAt") AS day, count(*), sum("inputTokens") AS input, sum("outputTokens") AS output
+FROM "AiRequest" GROUP BY 1 ORDER BY 1 DESC;
+```
+
+Without these variables the feature stays hidden in production. Development and tests use offline template drafts.
+The privacy policy already describes what is sent.
 
 ## 5. First admin
 
