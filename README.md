@@ -116,6 +116,7 @@ Application:   APPLIED ─┬→ ACCEPTED → INTERVIEWING → OFFERED ─┬→
 │   └── proxy.ts            # route protection + security headers (Next.js 16 "proxy", formerly middleware)
 ├── e2e/                    # Playwright end-to-end tests
 ├── docs/deployment.md      # production setup
+├── docs/architecture/      # design notes (hiring coordination)
 ├── Dockerfile              # image for non-Vercel hosts
 └── vercel.json             # Mumbai region + hourly reminder cron
 ```
@@ -152,6 +153,11 @@ and resume access control and the security headers.
 CI (`.github/workflows/ci.yml`) runs formatting, lint, type checks, unit tests and the build; a migration drift check
 and the end-to-end suite against Postgres; and a Docker image build.
 
-##We are enhancing the experience by integrating HireFlow AI (Coming soon)
+## Coming soon: hiring coordination (HireFlow features)
+
+We are bringing HireFlow-style coordination into Readyhire: AI-drafted replies to applications, candidate-picked
+interview times with reminders, Teams / Google Meet / Zoom links, interview panels with scorecards, and ATS sync, all
+within Readyhire's rules (only a recruiter's own reply counts, Readyhire stays the source of truth). The design and
+rollout plan are in **[docs/architecture/hiring-coordination.md](docs/architecture/hiring-coordination.md)**.
 
 --Team ReadyHire
