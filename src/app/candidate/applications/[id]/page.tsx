@@ -1,7 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { commitToApplication, confirmInterview, releaseCommitment, withdrawApplication } from "@/actions/candidate";
+import {
+  commitToApplication,
+  confirmInterview,
+  declineInterviewTimes,
+  pickInterviewTime,
+  releaseCommitment,
+  withdrawApplication,
+} from "@/actions/candidate";
 import { ActionForm } from "@/components/action-form";
 import { InterviewList } from "@/components/interview-list";
 import { JobMeta } from "@/components/job-meta";
@@ -10,10 +17,16 @@ import { Timeline } from "@/components/timeline";
 import { Disclosure } from "@/components/disclosure";
 import { Card, Field, Notice, PageHeader, buttonClass, inputClass } from "@/components/ui";
 import { requireCandidate } from "@/lib/auth";
-import { COMMITTABLE_STATUSES, MIN_REASON_LENGTH, OPEN_APPLICATION_STATUSES } from "@/lib/constants";
+import {
+  COMMITTABLE_STATUSES,
+  INTERVIEW_MODE_LABEL,
+  MIN_REASON_LENGTH,
+  OPEN_APPLICATION_STATUSES,
+} from "@/lib/constants";
 import { db } from "@/lib/db";
 import { INTERNAL_EVENTS } from "@/lib/events";
 import { formatDate, formatDateTime, formatLpa } from "@/lib/format";
+import { bookableSlots } from "@/lib/interviews";
 import { responseDueAt } from "@/lib/jobs";
 
 export const metadata: Metadata = { title: "Application" };
@@ -31,6 +44,12 @@ export default async function CandidateApplicationPage({ params }: PageProps<"/c
         },
       },
       interviews: { orderBy: { scheduledAt: "asc" } },
+      interviewInvites: {
+        where: { status: "OPEN" },
+        include: { slots: true },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
       events: {
         where: { type: { notIn: INTERNAL_EVENTS } },
         include: { actor: { select: { name: true, role: true } } },
@@ -49,6 +68,12 @@ export default async function CandidateApplicationPage({ params }: PageProps<"/c
   const latestOffer = ["OFFERED", "JOINED", "NOT_JOINED"].includes(application.status)
     ? application.events.find((e) => e.type === "OFFERED")
     : undefined;
+  // Times the recruiter offered that can still be booked.
+  const invite =
+    application.status === "ACCEPTED" || application.status === "INTERVIEWING"
+      ? application.interviewInvites[0]
+      : undefined;
+  const slots = invite ? bookableSlots(invite.slots) : [];
 
   return (
     <>
@@ -94,6 +119,60 @@ export default async function CandidateApplicationPage({ params }: PageProps<"/c
               </Notice>
             )}
           </Card>
+
+          {invite && slots.length > 0 && (
+            <Card
+              title="Pick an interview time"
+              description={`${invite.round} · ${invite.durationMins} min · ${INTERVIEW_MODE_LABEL[invite.mode]}`}
+              className="border-brand-300"
+            >
+              <ActionForm action={pickInterviewTime} submitLabel="Book this time">
+                <input type="hidden" name="inviteId" value={invite.id} />
+                <fieldset className="space-y-2">
+                  <legend className="mb-2 text-sm text-slate-600">
+                    The recruiter offered these times (IST). Pick the one that suits you; it&apos;s booked straight
+                    away.
+                  </legend>
+                  {slots.map((slot) => (
+                    <label
+                      key={slot.id}
+                      className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 px-3 py-2 text-sm has-checked:border-brand-300 has-checked:bg-brand-50"
+                    >
+                      <input type="radio" name="slotId" value={slot.id} required className="accent-brand-700" />
+                      {formatDateTime(slot.startsAt)}
+                    </label>
+                  ))}
+                </fieldset>
+                {invite.notes && <p className="text-sm whitespace-pre-line text-slate-600">{invite.notes}</p>}
+              </ActionForm>
+              <div className="mt-3">
+                <Disclosure summary="None of these work" tone="ghost">
+                  <ActionForm
+                    action={declineInterviewTimes}
+                    submitLabel="Ask for other times"
+                    variant="secondary"
+                    size="sm"
+                  >
+                    <input type="hidden" name="inviteId" value={invite.id} />
+                    <Field
+                      label="When are you available?"
+                      htmlFor="decline-note"
+                      hint="Shared with the recruiter, who will offer other times."
+                    >
+                      <textarea
+                        id="decline-note"
+                        name="note"
+                        rows={3}
+                        required
+                        maxLength={500}
+                        className={inputClass}
+                      />
+                    </Field>
+                  </ActionForm>
+                </Disclosure>
+              </div>
+            </Card>
+          )}
 
           {(application.status === "OFFERED" ||
             application.status === "JOINED" ||

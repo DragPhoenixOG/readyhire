@@ -18,7 +18,8 @@ export const metadata: Metadata = { title: "Dashboard" };
 
 export default async function CandidateDashboard() {
   const { user, profile } = await requireCandidate();
-  const [documents, applications, activeOffers, interviews] = await Promise.all([
+  const now = new Date();
+  const [documents, applications, activeOffers, interviews, invites] = await Promise.all([
     db.document.findMany({
       where: { candidateId: profile.id, type: { in: REQUIRED_DOCUMENTS } },
     }),
@@ -40,7 +41,7 @@ export default async function CandidateDashboard() {
     db.interview.findMany({
       where: {
         status: "SCHEDULED",
-        scheduledAt: { gte: new Date() },
+        scheduledAt: { gte: now },
         application: { candidateId: profile.id },
       },
       include: {
@@ -48,6 +49,16 @@ export default async function CandidateDashboard() {
       },
       orderBy: { scheduledAt: "asc" },
       take: 5,
+    }),
+    // Interview times offered by recruiters, still waiting for the candidate to pick one.
+    db.interviewInvite.findMany({
+      where: {
+        status: "OPEN",
+        slots: { some: { startsAt: { gt: now } } },
+        application: { candidateId: profile.id, status: { in: ["ACCEPTED", "INTERVIEWING"] } },
+      },
+      include: { application: { include: { job: { include: { company: true } } } } },
+      orderBy: { createdAt: "asc" },
     }),
   ]);
 
@@ -100,6 +111,7 @@ export default async function CandidateDashboard() {
           label="Upcoming interviews"
           value={interviews.length}
           tone={interviews.length ? "violet" : "neutral"}
+          hint={invites.length ? `${invites.length} waiting for you to pick a time` : undefined}
         />
         <StatCard
           label="Active offers (visible to recruiters)"
@@ -111,10 +123,29 @@ export default async function CandidateDashboard() {
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <Card title="Upcoming interviews">
-          {interviews.length === 0 ? (
+          {interviews.length === 0 && invites.length === 0 ? (
             <p className="text-sm text-slate-500">No interviews scheduled.</p>
           ) : (
             <ul className="divide-y divide-slate-100">
+              {invites.map((invite) => (
+                <li key={invite.id} className="flex items-start justify-between gap-3 py-2.5">
+                  <div className="min-w-0 text-sm">
+                    <p className="font-medium text-slate-900">
+                      {invite.round} · {invite.application.job.title}
+                    </p>
+                    <p className="text-slate-600">
+                      {invite.application.job.company.name} · {INTERVIEW_MODE_LABEL[invite.mode]}
+                    </p>
+                    <p className="text-xs text-slate-500">Times offered, pick one</p>
+                  </div>
+                  <Link
+                    href={`/candidate/applications/${invite.applicationId}`}
+                    className={buttonClass("primary", "sm")}
+                  >
+                    Pick a time
+                  </Link>
+                </li>
+              ))}
               {interviews.map((i) => (
                 <li key={i.id} className="flex items-start justify-between gap-3 py-2.5">
                   <div className="min-w-0 text-sm">

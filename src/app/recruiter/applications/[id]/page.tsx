@@ -3,15 +3,18 @@ import { notFound } from "next/navigation";
 import {
   acceptApplication,
   extendOffer,
+  offerInterviewTimes,
   recordJoiningOutcome,
   rejectApplication,
   reportGhosting,
   scheduleInterview,
   updateInterviewStatus,
+  withdrawInterviewTimes,
 } from "@/actions/recruiter";
 import { ActionForm } from "@/components/action-form";
 import { CandidateSignals } from "@/components/candidate-signals";
 import { DraftWithAi } from "@/components/draft-with-ai";
+import { InterviewDetailsFields } from "@/components/interview-fields";
 import { InterviewList } from "@/components/interview-list";
 import { ResumeLink } from "@/components/resume-link";
 import { ApplicationStatusBadge, ReportStatusBadge } from "@/components/status";
@@ -25,13 +28,13 @@ import {
   INTERVIEW_MODE_LABEL,
   MIN_REASON_LENGTH,
   OPEN_APPLICATION_STATUSES,
-  READYHIRE_ROOMS,
   REJECTION_CATEGORIES,
   VERIFICATION_METHOD_LABEL,
 } from "@/lib/constants";
 import { db } from "@/lib/db";
 import { aiDriver } from "@/lib/env";
 import { formatDate, formatDateTime, formatLpa, toDateInputValue } from "@/lib/format";
+import { bookableSlots } from "@/lib/interviews";
 import { responseDueAt } from "@/lib/jobs";
 
 export const metadata: Metadata = { title: "Application" };
@@ -45,6 +48,11 @@ export default async function RecruiterApplicationPage({ params }: PageProps<"/r
       job: true,
       candidate: { include: { ...candidateSummaryInclude, resume: true } },
       interviews: { orderBy: { scheduledAt: "asc" } },
+      interviewInvites: {
+        include: { slots: { orderBy: { startsAt: "asc" } } },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
       events: {
         include: { actor: { select: { name: true, role: true } } },
         orderBy: { createdAt: "desc" },
@@ -61,6 +69,15 @@ export default async function RecruiterApplicationPage({ params }: PageProps<"/r
   const due = responseDueAt(application.createdAt);
   const overdue = status === "APPLIED" && due < new Date();
   const aiDrafts = aiDriver() !== "off";
+  const firstName = candidate.user.name.split(" ")[0];
+  // The latest interview times offered: still waiting on the candidate, or turned down since nothing else happened.
+  const latestInvite = application.interviewInvites[0];
+  const openInvite =
+    latestInvite?.status === "OPEN" && bookableSlots(latestInvite.slots).length > 0 ? latestInvite : null;
+  const declinedInvite =
+    latestInvite?.status === "DECLINED" && !application.interviews.some((i) => i.createdAt > latestInvite.updatedAt)
+      ? latestInvite
+      : null;
 
   return (
     <>
@@ -119,78 +136,93 @@ export default async function RecruiterApplicationPage({ params }: PageProps<"/r
           )}
 
           {(status === "ACCEPTED" || status === "INTERVIEWING") && (
-            <Card title="Next step" description="Schedule interviews on Readyhire, then extend an offer.">
+            <Card
+              title="Next step"
+              description="Offer interview times for the candidate to pick, or schedule one yourself. Then extend an offer."
+            >
               <div className="space-y-3">
-                <Disclosure
-                  summary="Schedule an interview"
-                  tone="primary"
-                  defaultOpen={application.interviews.length === 0}
-                >
+                {openInvite ? (
+                  <Notice
+                    tone="blue"
+                    title={`Waiting for ${firstName} to pick a time`}
+                    action={
+                      <ActionForm
+                        action={withdrawInterviewTimes}
+                        submitLabel="Withdraw these times"
+                        variant="secondary"
+                        size="sm"
+                        confirm="Withdraw these interview times? The candidate won't be able to pick one."
+                      >
+                        <input type="hidden" name="inviteId" value={openInvite.id} />
+                      </ActionForm>
+                    }
+                  >
+                    <p>
+                      {openInvite.round} · {openInvite.durationMins} min · {INTERVIEW_MODE_LABEL[openInvite.mode]}
+                    </p>
+                    <ul className="mt-1 list-disc pl-5">
+                      {openInvite.slots.map((slot) => (
+                        <li key={slot.id}>
+                          {formatDateTime(slot.startsAt)}
+                          {slot.startsAt <= new Date() && " (passed)"}
+                        </li>
+                      ))}
+                    </ul>
+                  </Notice>
+                ) : (
+                  <>
+                    {declinedInvite && (
+                      <Notice tone="amber" title={`${firstName} asked for other times for ${declinedInvite.round}`}>
+                        <p className="whitespace-pre-line">{declinedInvite.declineNote}</p>
+                      </Notice>
+                    )}
+                    <Disclosure
+                      summary="Offer interview times"
+                      tone="primary"
+                      defaultOpen={application.interviews.length === 0 || !!declinedInvite}
+                    >
+                      <ActionForm action={offerInterviewTimes} submitLabel="Send times" resetOnSuccess>
+                        <input type="hidden" name="applicationId" value={application.id} />
+                        <p className="text-sm text-slate-600">
+                          Offer two or three times. {firstName} picks one and the interview is booked, already
+                          confirmed.
+                        </p>
+                        <InterviewDetailsFields prefix="offer">
+                          {[1, 2, 3].map((n) => (
+                            <Field
+                              key={n}
+                              label={`Option ${n} (IST)`}
+                              htmlFor={`offer-time${n}`}
+                              hint={n === 3 ? "Optional." : undefined}
+                            >
+                              <input
+                                id={`offer-time${n}`}
+                                name={`time${n}`}
+                                type="datetime-local"
+                                required={n < 3}
+                                className={inputClass}
+                              />
+                            </Field>
+                          ))}
+                        </InterviewDetailsFields>
+                      </ActionForm>
+                    </Disclosure>
+                  </>
+                )}
+                <Disclosure summary="Schedule at a fixed time">
                   <ActionForm action={scheduleInterview} submitLabel="Schedule interview" resetOnSuccess>
                     <input type="hidden" name="applicationId" value={application.id} />
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <Field label="Round" htmlFor="round">
+                    <InterviewDetailsFields prefix="fixed">
+                      <Field label="Date & time (IST)" htmlFor="fixed-scheduledAt">
                         <input
-                          id="round"
-                          name="round"
-                          required
-                          placeholder="Technical round 1"
-                          className={inputClass}
-                        />
-                      </Field>
-                      <Field label="Date & time (IST)" htmlFor="scheduledAt">
-                        <input
-                          id="scheduledAt"
+                          id="fixed-scheduledAt"
                           name="scheduledAt"
                           type="datetime-local"
                           required
                           className={inputClass}
                         />
                       </Field>
-                      <Field label="Duration (minutes)" htmlFor="durationMins">
-                        <input
-                          id="durationMins"
-                          name="durationMins"
-                          type="number"
-                          min={15}
-                          max={480}
-                          defaultValue={45}
-                          required
-                          className={inputClass}
-                        />
-                      </Field>
-                      <Field label="Mode" htmlFor="mode">
-                        <select id="mode" name="mode" defaultValue="VIDEO" className={inputClass}>
-                          {Object.entries(INTERVIEW_MODE_LABEL).map(([value, label]) => (
-                            <option key={value} value={value}>
-                              {label}
-                            </option>
-                          ))}
-                        </select>
-                      </Field>
-                      <Field
-                        label="Meeting link or address"
-                        htmlFor="location"
-                        hint="For video, phone or office interviews."
-                      >
-                        <input id="location" name="location" className={inputClass} />
-                      </Field>
-                      <Field
-                        label="Readyhire room"
-                        htmlFor="room"
-                        hint="Controlled room near the candidate — reduces malpractice."
-                      >
-                        <select id="room" name="room" defaultValue="" className={inputClass}>
-                          <option value="">Not using a room</option>
-                          {READYHIRE_ROOMS.map((room) => (
-                            <option key={room}>{room}</option>
-                          ))}
-                        </select>
-                      </Field>
-                    </div>
-                    <Field label="Notes for the candidate" htmlFor="notes">
-                      <textarea id="notes" name="notes" rows={2} className={inputClass} />
-                    </Field>
+                    </InterviewDetailsFields>
                   </ActionForm>
                 </Disclosure>
                 <Disclosure summary="Extend an offer">
