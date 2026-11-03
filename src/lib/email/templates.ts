@@ -208,6 +208,86 @@ export const emails = {
       },
     ]),
 
+  interviewTimesOffered: (
+    name: string,
+    jobTitle: string,
+    company: string,
+    invite: { round: string; times: Date[]; mode: string; durationMins: number },
+    applicationId: string,
+  ) =>
+    render(`Pick a time for your ${invite.round} with ${company}`, hi(name), [
+      {
+        text: `${company} would like to interview you for ${jobTitle} (${invite.round}, ${invite.durationMins} min, ${invite.mode}). Pick the time that suits you:`,
+      },
+      { quote: invite.times.map((t) => formatDateTime(t)).join("\n") },
+      { button: { label: "Pick a time", path: `/candidate/applications/${applicationId}` } },
+      { muted: "If none of these work, you can say so on the same page and the recruiter will offer others." },
+    ]),
+
+  interviewBooked: (
+    name: string,
+    jobTitle: string,
+    company: string,
+    interview: { round: string; scheduledAt: Date; mode: string; location: string | null },
+    applicationId: string,
+  ) =>
+    render(`Interview booked: ${interview.round} with ${company}`, hi(name), [
+      { text: `You're booked for "${interview.round}" for ${jobTitle} at ${company}.` },
+      {
+        quote: [formatDateTime(interview.scheduledAt), interview.mode, interview.location].filter(Boolean).join("\n"),
+      },
+      { button: { label: "View and add to calendar", path: `/candidate/applications/${applicationId}` } },
+      { muted: "Readyhire will email you a reminder before the interview." },
+    ]),
+
+  interviewTimePicked: (
+    recruiterName: string,
+    candidateName: string,
+    jobTitle: string,
+    interview: { round: string; scheduledAt: Date },
+    applicationId: string,
+  ) =>
+    render(`${candidateName} booked ${interview.round}: ${formatDateTime(interview.scheduledAt)}`, hi(recruiterName), [
+      {
+        text: `${candidateName} picked ${formatDateTime(interview.scheduledAt)} for "${interview.round}" (${jobTitle}). The interview is scheduled and confirmed.`,
+      },
+      { button: { label: "Open application", path: `/recruiter/applications/${applicationId}` } },
+    ]),
+
+  interviewTimesDeclined: (
+    recruiterName: string,
+    candidateName: string,
+    jobTitle: string,
+    round: string,
+    note: string,
+    applicationId: string,
+  ) =>
+    render(`${candidateName} needs other times for ${round}`, hi(recruiterName), [
+      { text: `None of the times you offered for "${round}" (${jobTitle}) work for ${candidateName}. Their note:` },
+      { quote: note },
+      { button: { label: "Offer other times", path: `/recruiter/applications/${applicationId}` } },
+    ]),
+
+  interviewReminder: (
+    name: string,
+    when: "tomorrow" | "soon",
+    interview: { round: string; scheduledAt: Date; mode: string; location: string | null },
+    jobTitle: string,
+    company: string,
+    path: string,
+  ) =>
+    render(
+      `Reminder: ${interview.round} ${when === "soon" ? "in about 2 hours" : "within a day"} (${jobTitle})`,
+      hi(name),
+      [
+        { text: `"${interview.round}" for ${jobTitle} at ${company} is coming up.` },
+        {
+          quote: [formatDateTime(interview.scheduledAt), interview.mode, interview.location].filter(Boolean).join("\n"),
+        },
+        { button: { label: "View interview", path } },
+      ],
+    ),
+
   offerExtended: (
     name: string,
     jobTitle: string,

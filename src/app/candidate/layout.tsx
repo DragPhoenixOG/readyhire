@@ -6,14 +6,25 @@ import { db } from "@/lib/db";
 
 export default async function CandidateLayout({ children }: LayoutProps<"/candidate">) {
   const { user, profile } = await requireCandidate();
-  const unconfirmedInterviews = await db.interview.count({
-    where: {
-      status: "SCHEDULED",
-      candidateConfirmed: false,
-      scheduledAt: { gte: new Date() },
-      application: { candidateId: profile.id },
-    },
-  });
+  const now = new Date();
+  // Interviews waiting on the candidate: ones to confirm and offered times to pick from.
+  const [unconfirmedInterviews, openInvites] = await Promise.all([
+    db.interview.count({
+      where: {
+        status: "SCHEDULED",
+        candidateConfirmed: false,
+        scheduledAt: { gte: now },
+        application: { candidateId: profile.id },
+      },
+    }),
+    db.interviewInvite.count({
+      where: {
+        status: "OPEN",
+        slots: { some: { startsAt: { gt: now } } },
+        application: { candidateId: profile.id, status: { in: ["ACCEPTED", "INTERVIEWING"] } },
+      },
+    }),
+  ]);
 
   const banner =
     profile.verificationStatus === "VERIFIED" ? null : (
@@ -59,7 +70,7 @@ export default async function CandidateLayout({ children }: LayoutProps<"/candid
         {
           href: "/candidate/applications",
           label: "Applications",
-          count: unconfirmedInterviews,
+          count: unconfirmedInterviews + openInvites,
         },
         { href: "/candidate/offers", label: "My offers" },
         { href: "/candidate/profile", label: "Profile" },

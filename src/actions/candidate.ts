@@ -28,6 +28,7 @@ import {
   zReason,
   zText,
 } from "@/lib/forms";
+import { formatDateTime } from "@/lib/format";
 import { notify } from "@/lib/notifications";
 
 // ───────────────────────── Profile ─────────────────────────
@@ -320,6 +321,10 @@ export async function withdrawApplication(_: ActionState, formData: FormData): P
       where: { applicationId: application.id, status: "SCHEDULED" },
       data: { status: "CANCELLED" },
     });
+    await tx.interviewInvite.updateMany({
+      where: { applicationId: application.id, status: "OPEN" },
+      data: { status: "CANCELLED" },
+    });
     await logEvent(tx, application.id, user.id, "WITHDRAWN", reason);
   });
   notify.candidateUpdate(application.id, "withdrew", reason);
@@ -349,4 +354,90 @@ export async function confirmInterview(_: ActionState, formData: FormData): Prom
   });
   refresh();
   return done("Attendance confirmed.");
+}
+
+/** Loads an open invite for one of this candidate's applications that's still at the interview stage. */
+async function ownOpenInvite(candidateId: string, inviteId: string) {
+  const invite = await db.interviewInvite.findFirst({
+    where: { id: inviteId, application: { candidateId } },
+    include: { slots: true, application: { select: { id: true, status: true } } },
+  });
+  if (!invite || invite.status !== "OPEN") return null;
+  if (invite.application.status !== "ACCEPTED" && invite.application.status !== "INTERVIEWING") return null;
+  return invite;
+}
+
+const pickSchema = z.object({ inviteId: zId, slotId: zId });
+
+/** Books one of the times the recruiter offered: the interview is created already confirmed. */
+export async function pickInterviewTime(_: ActionState, formData: FormData): Promise<ActionState> {
+  const { user, profile } = await requireCandidate();
+  const parsed = parseForm(pickSchema, formData);
+  if (!parsed.ok) return fail(parsed.error);
+
+  const invite = await ownOpenInvite(profile.id, parsed.data.inviteId);
+  if (!invite) return fail("These times are no longer available.");
+  const slot = invite.slots.find((s) => s.id === parsed.data.slotId);
+  if (!slot || slot.startsAt <= new Date()) return fail("That time has passed. Pick another one.");
+
+  const interview = await db.$transaction(async (tx) => {
+    // Conditional update: a double click or a second tab can't book twice.
+    const { count } = await tx.interviewInvite.updateMany({
+      where: { id: invite.id, status: "OPEN" },
+      data: { status: "BOOKED" },
+    });
+    if (count === 0) return null;
+    const created = await tx.interview.create({
+      data: {
+        applicationId: invite.applicationId,
+        inviteId: invite.id,
+        round: invite.round,
+        scheduledAt: slot.startsAt,
+        durationMins: invite.durationMins,
+        mode: invite.mode,
+        location: invite.location,
+        notes: invite.notes,
+        candidateConfirmed: true,
+      },
+    });
+    await tx.application.update({ where: { id: invite.applicationId }, data: { status: "INTERVIEWING" } });
+    await logEvent(
+      tx,
+      invite.applicationId,
+      user.id,
+      "INTERVIEW_SCHEDULED",
+      `${invite.round} on ${formatDateTime(slot.startsAt)}, picked by the candidate`,
+    );
+    return created;
+  });
+  if (!interview) return fail("These times are no longer available.");
+  notify.interviewBooked(interview.id);
+  refresh();
+  return done("Interview booked. Add it to your calendar from the list below.");
+}
+
+const declineTimesSchema = z.object({
+  inviteId: zId,
+  note: zText("A note for the recruiter", 500),
+});
+
+export async function declineInterviewTimes(_: ActionState, formData: FormData): Promise<ActionState> {
+  const { user, profile } = await requireCandidate();
+  const parsed = parseForm(declineTimesSchema, formData);
+  if (!parsed.ok) return fail(parsed.error);
+
+  const invite = await ownOpenInvite(profile.id, parsed.data.inviteId);
+  if (!invite) return fail("These times are no longer available.");
+  const declined = await db.$transaction(async (tx) => {
+    const { count } = await tx.interviewInvite.updateMany({
+      where: { id: invite.id, status: "OPEN" },
+      data: { status: "DECLINED", declineNote: parsed.data.note },
+    });
+    if (count) await logEvent(tx, invite.applicationId, user.id, "INTERVIEW_TIMES_DECLINED", parsed.data.note);
+    return count > 0;
+  });
+  if (!declined) return fail("These times are no longer available.");
+  notify.interviewTimesDeclined(invite.id);
+  refresh();
+  return done("Sent. The recruiter will offer other times.");
 }

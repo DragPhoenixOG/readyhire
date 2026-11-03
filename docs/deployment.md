@@ -4,7 +4,7 @@ The recommended production setup keeps data in India and needs no servers to man
 
 | Piece     | Service                                      | Why                                                                    | Approx. cost                     |
 | --------- | -------------------------------------------- | ---------------------------------------------------------------------- | -------------------------------- |
-| App       | **Vercel Pro**, functions in Mumbai (`bom1`) | Preview deploy per pull request, instant rollbacks, hourly cron        | $20 / month per seat             |
+| App       | **Vercel Pro**, functions in Mumbai (`bom1`) | Preview deploy per pull request, instant rollbacks, frequent cron jobs | $20 / month per seat             |
 | Database  | **Supabase Postgres**, Mumbai (`ap-south-1`) | Managed backups and connection pooling                                 | $25 / month (Pro)                |
 | Documents | **AWS S3**, Mumbai (`ap-south-1`), private   | Encrypted at rest, browser uploads via pre-signed URLs, pennies per GB | ~$1 / month                      |
 | Email     | **Resend**                                   | Simple API, good deliverability                                        | Free up to 3,000/month, then $20 |
@@ -44,14 +44,18 @@ Differences from the steps below:
   (Google Account → Security → App passwords), then set `EMAIL_DRIVER=smtp`,
   `SMTP_URL=smtps://you%40gmail.com:<app password without spaces>@smtp.gmail.com:465` (the `@` in the address is
   written `%40`) and `EMAIL_FROM="Readyhire <you@gmail.com>"`.
-- **Reminders:** `vercel.json` runs `/api/cron/reminders` daily at 09:00 IST. Recruiters still get the "due within
-  24 hours" and "overdue" emails, just up to a day later than with the hourly schedule; overdue recruiters are blocked
-  from posting jobs immediately either way.
+- **Reminders:** `vercel.json` runs `/api/cron/reminders` daily at 09:00 IST. Recruiters still get the reply
+  reminders, just up to a day later than with a frequent schedule; overdue recruiters are blocked from posting jobs
+  immediately either way. Interview reminders (a day and two hours before) need the endpoint to run every 15
+  minutes, which Hobby can't do, so add a free external scheduler such as [cron-job.org](https://cron-job.org): a
+  job every 15 minutes that calls `GET https://<your app>/api/cron/reminders` with the header
+  `Authorization: Bearer <CRON_SECRET>`. Running it more often is safe; every email is sent once.
 - **Preview deployments:** set the environment variables for **Production only**, so previews can never reach the
   production database. Previews will show a configuration error until a staging database exists.
 
-Moving to the recommended setup later: switch Vercel to Pro, set the cron back to hourly (`"5 * * * *"`), and if the
-database moves to Mumbai, set `regions` back to `["bom1"]` so the app runs next to it.
+Moving to the recommended setup later: switch Vercel to Pro, set the cron to every 15 minutes (`"*/15 * * * *"`) and
+drop the external scheduler, and if the database moves to Mumbai, set `regions` back to `["bom1"]` so the app runs
+next to it.
 
 ---
 
@@ -173,8 +177,11 @@ candidates.
 
 - **Health:** point an uptime monitor (Better Stack, UptimeRobot, …) at `/api/health`; it checks the database.
 - **Logs:** Vercel → Logs. Email delivery problems are logged as `[email] Failed to send …` and never break user actions.
-- **Reminders:** the hourly cron emails recruiters 24 hours before the response deadline and once when it passes.
-  Trigger it manually with `curl -H "Authorization: Bearer $CRON_SECRET" https://readyhire.in/api/cron/reminders`.
+- **Reminders:** each run of `/api/cron/reminders` emails recruiters when 48 hours and 24 hours are left to reply
+  and once when the deadline passes, reminds candidates and recruiters a day and two hours before each interview, and
+  closes offered interview times that have all passed. It is safe to run as often as you like; schedule it every 15
+  minutes so the two-hour interview reminder goes out on time. Trigger it manually with
+  `curl -H "Authorization: Bearer $CRON_SECRET" https://readyhire.in/api/cron/reminders`.
 - **Rollbacks:** Vercel → Deployments → Instant Rollback. Migrations are forward-only, so keep schema changes
   backward compatible with the previous release (add columns first, remove them in a later release).
 - **CI:** every pull request runs lint, type checks, unit tests, a migration drift check, end-to-end tests against
@@ -189,5 +196,5 @@ docker run --rm -e DIRECT_URL=... readyhire-migrate          # apply migrations
 docker run -p 3000:3000 --env-file .env.production readyhire # serve
 ```
 
-The image runs as a non-root user and has a health check. Schedule the reminders endpoint hourly with your platform's
-scheduler (or cron + curl as above).
+The image runs as a non-root user and has a health check. Schedule the reminders endpoint every 15 minutes with your
+platform's scheduler (or cron + curl as above).

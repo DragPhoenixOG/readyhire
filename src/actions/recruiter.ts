@@ -22,6 +22,7 @@ import {
   zText,
 } from "@/lib/forms";
 import { parseDateTimeInput } from "@/lib/format";
+import { offeredTimesProblem } from "@/lib/interviews";
 import { overdueWhere } from "@/lib/jobs";
 import { notify } from "@/lib/notifications";
 
@@ -174,6 +175,10 @@ export async function rejectApplication(_: ActionState, formData: FormData): Pro
       where: { applicationId: application.id, status: "SCHEDULED" },
       data: { status: "CANCELLED" },
     });
+    await tx.interviewInvite.updateMany({
+      where: { applicationId: application.id, status: "OPEN" },
+      data: { status: "CANCELLED" },
+    });
     // A rejected application can no longer hold the candidate's commitment.
     if (application.candidate.committedApplicationId === application.id) {
       await tx.candidateProfile.update({
@@ -188,22 +193,28 @@ export async function rejectApplication(_: ActionState, formData: FormData): Pro
   return done("Application rejected. The candidate can see your reason.");
 }
 
-const interviewSchema = z
-  .object({
-    applicationId: zId,
-    round: zText("Round name", 80),
-    scheduledAt: z.string({ error: "Date and time are required." }),
-    durationMins: zNumber("Duration", 15, 480),
-    mode: z.enum(["VIDEO", "PHONE", "IN_PERSON", "READYHIRE_ROOM"], {
-      error: "Choose an interview mode.",
-    }),
-    location: zOptionalText(300),
-    room: zOptionalText(100),
-    notes: zOptionalText(1000),
-  })
-  .refine((v) => v.mode !== "READYHIRE_ROOM" || (v.room && READYHIRE_ROOMS.includes(v.room)), {
-    message: "Choose a Readyhire interview room.",
-  });
+/** What every interview needs, whether it's booked at a fixed time or the candidate picks from offered times. */
+const interviewDetails = z.object({
+  applicationId: zId,
+  round: zText("Round name", 80),
+  durationMins: zNumber("Duration", 15, 480),
+  mode: z.enum(["VIDEO", "PHONE", "IN_PERSON", "READYHIRE_ROOM"], {
+    error: "Choose an interview mode.",
+  }),
+  location: zOptionalText(300),
+  room: zOptionalText(100),
+  notes: zOptionalText(1000),
+});
+
+const roomChosen = (v: { mode: string; room: string | null }) =>
+  v.mode !== "READYHIRE_ROOM" || (!!v.room && READYHIRE_ROOMS.includes(v.room));
+const roomMessage = { message: "Choose a Readyhire interview room." };
+const interviewPlace = (v: { mode: string; room: string | null; location: string | null }) =>
+  v.mode === "READYHIRE_ROOM" ? `Readyhire Room — ${v.room}` : v.location;
+
+const interviewSchema = interviewDetails
+  .extend({ scheduledAt: z.string({ error: "Date and time are required." }) })
+  .refine(roomChosen, roomMessage);
 
 export async function scheduleInterview(_: ActionState, formData: FormData): Promise<ActionState> {
   const { user, recruiter } = await requireApprovedRecruiter();
@@ -221,7 +232,7 @@ export async function scheduleInterview(_: ActionState, formData: FormData): Pro
     return fail("Accept the application before scheduling interviews.");
   }
 
-  const place = mode === "READYHIRE_ROOM" ? `Readyhire Room — ${room}` : location;
+  const place = interviewPlace({ mode, room, location });
   const interview = await db.$transaction(async (tx) => {
     const created = await tx.interview.create({
       data: {
@@ -250,6 +261,86 @@ export async function scheduleInterview(_: ActionState, formData: FormData): Pro
   notify.interviewScheduled(interview.id);
   refresh();
   return done("Interview scheduled. The candidate will be asked to confirm.");
+}
+
+const offerTimesSchema = interviewDetails
+  .extend({
+    time1: z.string().optional(),
+    time2: z.string().optional(),
+    time3: z.string().optional(),
+  })
+  .refine(roomChosen, roomMessage);
+
+/** Offers 2-3 interview times; the candidate books one (see pickInterviewTime). */
+export async function offerInterviewTimes(_: ActionState, formData: FormData): Promise<ActionState> {
+  const { user, recruiter } = await requireApprovedRecruiter();
+  const parsed = parseForm(offerTimesSchema, formData);
+  if (!parsed.ok) return fail(parsed.error);
+  const { applicationId, round, durationMins, mode, location, room, notes } = parsed.data;
+
+  const entered = [parsed.data.time1, parsed.data.time2, parsed.data.time3].filter((t): t is string => !!t);
+  const times = entered.map(parseDateTimeInput);
+  if (times.some((t) => !t)) return fail("Enter each time as a valid date and time.");
+  const problem = offeredTimesProblem(times as Date[]);
+  if (problem) return fail(problem);
+
+  const application = await ownApplication(recruiter.id, applicationId);
+  if (!application) return fail("Application not found.");
+  if (application.status !== "ACCEPTED" && application.status !== "INTERVIEWING") {
+    return fail("Accept the application before arranging interviews.");
+  }
+  const now = new Date();
+  const open = await db.interviewInvite.findFirst({
+    where: { applicationId, status: "OPEN", slots: { some: { startsAt: { gt: now } } } },
+  });
+  if (open) return fail("You've already offered times for this application. Withdraw them to offer new ones.");
+
+  const sorted = (times as Date[]).sort((a, b) => a.getTime() - b.getTime());
+  const invite = await db.$transaction(async (tx) => {
+    // Offers whose times have all passed can't be booked any more; the scheduler would expire them later.
+    await tx.interviewInvite.updateMany({
+      where: { applicationId, status: "OPEN", slots: { none: { startsAt: { gt: now } } } },
+      data: { status: "EXPIRED" },
+    });
+    const created = await tx.interviewInvite.create({
+      data: {
+        applicationId,
+        round,
+        durationMins,
+        mode,
+        location: interviewPlace({ mode, room, location }),
+        notes,
+        slots: { create: sorted.map((startsAt) => ({ startsAt })) },
+      },
+    });
+    await logEvent(tx, applicationId, user.id, "INTERVIEW_TIMES_OFFERED", `${round}: ${sorted.length} times offered`);
+    return created;
+  });
+  notify.interviewTimesOffered(invite.id);
+  refresh();
+  return done("Times sent. The candidate will pick one.");
+}
+
+export async function withdrawInterviewTimes(_: ActionState, formData: FormData): Promise<ActionState> {
+  const { user, recruiter } = await requireApprovedRecruiter();
+  const parsed = parseForm(z.object({ inviteId: zId }), formData);
+  if (!parsed.ok) return fail(parsed.error);
+
+  const invite = await db.interviewInvite.findFirst({
+    where: { id: parsed.data.inviteId, application: { job: { recruiterId: recruiter.id } } },
+  });
+  if (!invite) return fail("Interview times not found.");
+  const withdrawn = await db.$transaction(async (tx) => {
+    const { count } = await tx.interviewInvite.updateMany({
+      where: { id: invite.id, status: "OPEN" },
+      data: { status: "CANCELLED" },
+    });
+    if (count) await logEvent(tx, invite.applicationId, user.id, "INTERVIEW_TIMES_WITHDRAWN", invite.round);
+    return count > 0;
+  });
+  if (!withdrawn) return fail("The candidate has already responded to these times.");
+  refresh();
+  return done("Times withdrawn.");
 }
 
 const interviewUpdateSchema = z.object({
@@ -313,6 +404,8 @@ export async function extendOffer(_: ActionState, formData: FormData): Promise<A
       where: { id: applicationId },
       data: { status: "OFFERED", offerCtcLpa, offerJoiningDate },
     });
+    // Interview times still waiting on the candidate are no longer needed.
+    await tx.interviewInvite.updateMany({ where: { applicationId, status: "OPEN" }, data: { status: "CANCELLED" } });
     await logEvent(tx, applicationId, user.id, "OFFERED", message);
   });
   notify.offerExtended(applicationId);

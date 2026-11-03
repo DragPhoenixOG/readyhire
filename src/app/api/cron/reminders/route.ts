@@ -4,6 +4,7 @@ import { emails } from "@/lib/email/templates";
 import { sendEmail } from "@/lib/email/transport";
 import { env } from "@/lib/env";
 import { formatDateTime } from "@/lib/format";
+import { expireInterviewInvites, sendInterviewReminders } from "@/lib/interview-jobs";
 import { replyReminderStage, responseDueAt } from "@/lib/jobs";
 import { RESPONSE_SLA_HOURS } from "@/lib/constants";
 import { pruneRateLimits } from "@/lib/rate-limit";
@@ -21,7 +22,8 @@ function authorized(request: Request) {
 /**
  * Scheduled job (Vercel Cron, or any scheduler that can send the bearer token; safe to run as often as every few
  * minutes): reminds recruiters about unanswered applications with 48 and 24 hours left, alerts once when they become
- * overdue, and prunes expired rate-limit windows and auth tokens.
+ * overdue, reminds candidates and recruiters about interviews a day and two hours ahead, expires interview times
+ * that have all passed, and prunes expired rate-limit windows and auth tokens.
  */
 export async function GET(request: Request) {
   if (!authorized(request)) return new Response("Unauthorized", { status: 401 });
@@ -85,6 +87,9 @@ export async function GET(request: Request) {
     });
   }
 
+  const interviewReminders = await sendInterviewReminders(now);
+  const invitesExpired = await expireInterviewInvites(now);
+
   await pruneRateLimits();
   await db.authToken.deleteMany({
     where: { OR: [{ expiresAt: { lt: now } }, { usedAt: { not: null } }] },
@@ -94,5 +99,7 @@ export async function GET(request: Request) {
     ok: true,
     recruitersEmailed: sent,
     applicationsChecked: pending.length,
+    interviewReminders,
+    invitesExpired,
   });
 }

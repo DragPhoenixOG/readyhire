@@ -120,6 +120,66 @@ export const notify = {
     });
   },
 
+  interviewTimesOffered(inviteId: string) {
+    later(async () => {
+      const invite = await db.interviewInvite.findUniqueOrThrow({
+        where: { id: inviteId },
+        include: { slots: { orderBy: { startsAt: "asc" } } },
+      });
+      const a = await applicationContext(invite.applicationId);
+      await sendEmail({
+        to: a.candidate.user.email,
+        ...emails.interviewTimesOffered(
+          a.candidate.user.name,
+          a.job.title,
+          a.job.company.name,
+          {
+            round: invite.round,
+            times: invite.slots.map((s) => s.startsAt),
+            mode: INTERVIEW_MODE_LABEL[invite.mode],
+            durationMins: invite.durationMins,
+          },
+          a.id,
+        ),
+      });
+    });
+  },
+
+  /** The candidate booked one of the offered times: confirm to them, tell the recruiter. */
+  interviewBooked(interviewId: string) {
+    later(async () => {
+      const interview = await db.interview.findUniqueOrThrow({ where: { id: interviewId } });
+      const a = await applicationContext(interview.applicationId);
+      const details = { ...interview, mode: INTERVIEW_MODE_LABEL[interview.mode] };
+      await sendEmail({
+        to: a.candidate.user.email,
+        ...emails.interviewBooked(a.candidate.user.name, a.job.title, a.job.company.name, details, a.id),
+      });
+      await sendEmail({
+        to: a.job.recruiter.user.email,
+        ...emails.interviewTimePicked(a.job.recruiter.user.name, a.candidate.user.name, a.job.title, interview, a.id),
+      });
+    });
+  },
+
+  interviewTimesDeclined(inviteId: string) {
+    later(async () => {
+      const invite = await db.interviewInvite.findUniqueOrThrow({ where: { id: inviteId } });
+      const a = await applicationContext(invite.applicationId);
+      await sendEmail({
+        to: a.job.recruiter.user.email,
+        ...emails.interviewTimesDeclined(
+          a.job.recruiter.user.name,
+          a.candidate.user.name,
+          a.job.title,
+          invite.round,
+          invite.declineNote ?? "",
+          a.id,
+        ),
+      });
+    });
+  },
+
   offerExtended(applicationId: string) {
     later(async () => {
       const a = await applicationContext(applicationId);

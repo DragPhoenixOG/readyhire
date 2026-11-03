@@ -10,10 +10,12 @@ to joining.
 Three modules: **Candidate**, **Recruiter** and **Admin**.
 
 - **Candidates** upload their offer letter, notice policy and resignation evidence, get verified, add an optional PDF
-  resume, apply to jobs, declare competing offers, commit to one role at a time and confirm interviews.
+  resume, apply to jobs, declare competing offers, commit to one role at a time, and pick or confirm interview times.
 - **Recruiters** sign up with a company email domain, are approved by an admin, post jobs, see verified talent with
-  notice and offer signals, must accept or reject every application with a reason within 72 hours, schedule
-  interviews (optionally in a Readyhire room), extend offers, record joining outcomes and report ghosting.
+  notice and offer signals, must accept or reject every application with a reason within 72 hours (optionally
+  starting from an AI draft), offer interview times for the candidate to pick or schedule one directly (optionally in
+  a Readyhire room), extend offers, record joining outcomes and report ghosting. Both sides get calendar files and
+  interview reminders.
 - **Admins** review documents, verify candidates (document review, screen share or in-person), approve recruiters,
   resolve ghosting reports, flag or restrict users, and track response rates and joining outcomes. Every decision is
   in the audit log.
@@ -66,24 +68,24 @@ overdue reply. `npm run db:seed` resets everything (it refuses to run against pr
 1. **Candidate** (Neha): fill in the profile and notice details, upload the three documents, submit for verification.
 2. **Admin**: Verifications → Neha → preview and verify each document → approve with a verification method.
 3. **Candidate**: apply to a job; the application shows when the recruiter's reply is due.
-4. **Recruiter** (Priya): Applications → accept with a message or reject with a reason → schedule an interview →
-   extend an offer → record whether the candidate joined.
+4. **Recruiter** (Priya): Applications → accept with a message or reject with a reason → offer interview times (the
+   candidate picks one) or schedule one → extend an offer → record whether the candidate joined.
 5. **Candidate**: commit to the accepted role; applying elsewhere is blocked until the commitment is released.
 6. **Recruiter** (Arjun): an overdue reply pauses job posting until he responds.
 
 ## Core rules and where they're enforced
 
-| Rule                                   | Enforcement                                                                                                                                                                                                                                               |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Only verified candidates are listed    | `approveCandidate` (`src/actions/admin.ts`) requires all three documents verified; the talent pool and `applyToJob` admit only verified candidates (`src/lib/candidate.ts`).                                                                              |
-| Verified details can't change silently | Notice details, documents and current company lock while verification is pending or done; changing them means reopening verification, which hides the profile.                                                                                            |
-| Recruiters use a company domain        | Personal and disposable mailboxes are blocked, the domain must match the company website (`src/lib/domain.ts`), the inbox must be confirmed, and an admin approves the account.                                                                           |
-| Every application gets a response      | Accepting needs a message; rejecting needs a category plus a 15+ character explanation. Replies are due in 72 hours, reminders go out 24 hours before, and overdue recruiters can't post jobs (`src/actions/recruiter.ts`, `src/app/api/cron/reminders`). |
-| One commitment at a time               | A single unique `committedApplicationId` per candidate, set with a conditional update; committed candidates can't apply elsewhere; releases are logged and shown to recruiters.                                                                           |
-| Offer-shopping visibility              | Active offers = declared offers still held or accepted + offers extended on Readyhire, with how many are backed by verified proof (`summarizeCandidate`).                                                                                                 |
-| Joining is tracked                     | Offered applications end as Joined or Did not join; recruiters can report ghosting; upheld reports appear on the candidate's profile.                                                                                                                     |
-| Documents stay private                 | Direct-to-bucket uploads with pre-signed URLs, content (magic-byte) checks, and 60-second signed download links for the owner and admins only (`src/actions/documents.ts`, `src/lib/storage`).                                                            |
-| Resumes reach only chosen recruiters   | The optional PDF resume isn't in the talent pool; besides the candidate and admins, only approved recruiters whose jobs the candidate applied to can open it (`src/app/api/resumes/[id]/route.ts`).                                                       |
+| Rule                                   | Enforcement                                                                                                                                                                                                                                                      |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Only verified candidates are listed    | `approveCandidate` (`src/actions/admin.ts`) requires all three documents verified; the talent pool and `applyToJob` admit only verified candidates (`src/lib/candidate.ts`).                                                                                     |
+| Verified details can't change silently | Notice details, documents and current company lock while verification is pending or done; changing them means reopening verification, which hides the profile.                                                                                                   |
+| Recruiters use a company domain        | Personal and disposable mailboxes are blocked, the domain must match the company website (`src/lib/domain.ts`), the inbox must be confirmed, and an admin approves the account.                                                                                  |
+| Every application gets a response      | Accepting needs a message; rejecting needs a category plus a 15+ character explanation. Replies are due in 72 hours, reminders go out 48 and 24 hours before, and overdue recruiters can't post jobs (`src/actions/recruiter.ts`, `src/app/api/cron/reminders`). |
+| One commitment at a time               | A single unique `committedApplicationId` per candidate, set with a conditional update; committed candidates can't apply elsewhere; releases are logged and shown to recruiters.                                                                                  |
+| Offer-shopping visibility              | Active offers = declared offers still held or accepted + offers extended on Readyhire, with how many are backed by verified proof (`summarizeCandidate`).                                                                                                        |
+| Joining is tracked                     | Offered applications end as Joined or Did not join; recruiters can report ghosting; upheld reports appear on the candidate's profile.                                                                                                                            |
+| Documents stay private                 | Direct-to-bucket uploads with pre-signed URLs, content (magic-byte) checks, and 60-second signed download links for the owner and admins only (`src/actions/documents.ts`, `src/lib/storage`).                                                                   |
+| Resumes reach only chosen recruiters   | The optional PDF resume isn't in the talent pool; besides the candidate and admins, only approved recruiters whose jobs the candidate applied to can open it (`src/app/api/resumes/[id]/route.ts`).                                                              |
 
 ### Status flows
 
@@ -146,8 +148,9 @@ npm run test:e2e
 The end-to-end suite builds the app and runs it against its own database (`readyhire_e2e` on the local Postgres,
 created automatically; override with `E2E_DATABASE_URL`), local storage and a file-based email outbox, so it can follow
 confirmation and reset links. It covers the company-domain check, email verification, password reset, verification
-gating, upload content checks, the mandatory reply with a reason, single-role commitment, overdue reminders, document
-and resume access control and the security headers.
+gating, upload content checks, the mandatory reply with a reason, AI-drafted replies, single-role commitment, overdue
+reminders, interview times picked by the candidate with calendar files and reminders, document and resume access
+control and the security headers.
 
 CI (`.github/workflows/ci.yml`) runs formatting, lint, type checks, unit tests and the build; a migration drift check
 and the end-to-end suite against Postgres; and a Docker image build.

@@ -378,10 +378,11 @@ model Application {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  committedBy     CandidateProfile?  @relation("Commitment")
-  interviews      Interview[]
-  events          ApplicationEvent[]
-  ghostingReports GhostingReport[]
+  committedBy      CandidateProfile?  @relation("Commitment")
+  interviews       Interview[]
+  interviewInvites InterviewInvite[]
+  events           ApplicationEvent[]
+  ghostingReports  GhostingReport[]
 
   @@unique([jobId, candidateId])
   @@index([candidateId])
@@ -400,8 +401,16 @@ model Interview {
   notes              String?
   status             InterviewStatus @default(SCHEDULED)
   candidateConfirmed Boolean         @default(false)
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @updatedAt
+
+  // Set when the candidate booked this interview from times the recruiter offered.
+  inviteId String?          @unique
+  invite   InterviewInvite? @relation(fields: [inviteId], references: [id])
+
+  // Reminders to the candidate and recruiter, each sent at most once.
+  reminder24hSentAt DateTime?
+  reminder2hSentAt  DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   @@index([applicationId, scheduledAt])
 }
@@ -451,4 +460,42 @@ model AiRequest {
   createdAt    DateTime @default(now())
 
   @@index([createdAt])
+}
+
+enum InterviewInviteStatus {
+  OPEN // waiting for the candidate to pick a time
+  BOOKED // the candidate picked one; the Interview exists
+  DECLINED // none of the times worked; see declineNote
+  CANCELLED // withdrawn by the recruiter, or the application closed
+  EXPIRED // every offered time passed
+}
+
+/// Interview times a recruiter offers; the candidate books one of them.
+model InterviewInvite {
+  id            String                @id @default(cuid())
+  applicationId String
+  application   Application           @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  round         String
+  durationMins  Int                   @default(45)
+  mode          InterviewMode
+  location      String?
+  notes         String?
+  status        InterviewInviteStatus @default(OPEN)
+  declineNote   String?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  slots     InterviewInviteSlot[]
+  interview Interview?
+
+  @@index([applicationId, status])
+}
+
+model InterviewInviteSlot {
+  id       String          @id @default(cuid())
+  inviteId String
+  invite   InterviewInvite @relation(fields: [inviteId], references: [id], onDelete: Cascade)
+  startsAt DateTime
+
+  @@unique([inviteId, startsAt])
 }

@@ -25,6 +25,7 @@ export function InterviewList<T extends InterviewItem>({
   renderAction?: (interview: T) => ReactNode;
 }) {
   if (interviews.length === 0) return <p className="text-sm text-slate-500">No interviews scheduled yet.</p>;
+  const now = new Date();
   return (
     <ul className="divide-y divide-slate-100">
       {interviews.map((interview) => (
@@ -60,6 +61,17 @@ export function InterviewList<T extends InterviewItem>({
               </p>
             )}
             {interview.notes && <p className="whitespace-pre-line text-slate-500">{interview.notes}</p>}
+            {interview.status === "SCHEDULED" && interview.scheduledAt > now && (
+              <p>
+                <a
+                  href={`/api/interviews/${interview.id}/calendar`}
+                  download
+                  className="text-xs font-medium text-brand-700 hover:underline"
+                >
+                  Add to calendar (.ics)
+                </a>
+              </p>
+            )}
           </div>
           {renderAction?.(interview)}
         </li>
