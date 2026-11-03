@@ -103,6 +103,13 @@ export default async function AdminApplicationsPage({ searchParams }: PageProps<
                         ? `${a.rejectionCategory}: ${a.rejectionReason}`
                         : (a.events[0]?.message ?? a.responseMessage ?? "—")}
                     </p>
+                    {a.responseDraftUnedited ? (
+                      <span className="mt-1 inline-block">
+                        <Badge tone="amber">AI draft, sent unedited</Badge>
+                      </span>
+                    ) : (
+                      a.responseDraftUsed && <p className="mt-1 text-xs text-slate-400">Edited from an AI draft</p>
+                    )}
                   </Td>
                 </tr>
               );
