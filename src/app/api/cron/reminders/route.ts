@@ -4,7 +4,7 @@ import { emails } from "@/lib/email/templates";
 import { sendEmail } from "@/lib/email/transport";
 import { env } from "@/lib/env";
 import { formatDateTime } from "@/lib/format";
-import { responseDueAt } from "@/lib/jobs";
+import { replyReminderStage, responseDueAt } from "@/lib/jobs";
 import { RESPONSE_SLA_HOURS } from "@/lib/constants";
 import { pruneRateLimits } from "@/lib/rate-limit";
 
@@ -19,22 +19,21 @@ function authorized(request: Request) {
 }
 
 /**
- * Hourly job (Vercel Cron, or any scheduler that can send the bearer token):
- * reminds recruiters about applications due within 24 hours, alerts once when they become
+ * Scheduled job (Vercel Cron, or any scheduler that can send the bearer token; safe to run as often as every few
+ * minutes): reminds recruiters about unanswered applications with 48 and 24 hours left, alerts once when they become
  * overdue, and prunes expired rate-limit windows and auth tokens.
  */
 export async function GET(request: Request) {
   if (!authorized(request)) return new Response("Unauthorized", { status: 401 });
 
   const now = new Date();
-  const overdueBefore = new Date(now.getTime() - RESPONSE_SLA_HOURS * HOUR);
-  const dueSoonBefore = new Date(now.getTime() - (RESPONSE_SLA_HOURS - 24) * HOUR);
+  const earlyBefore = new Date(now.getTime() - (RESPONSE_SLA_HOURS - 48) * HOUR);
 
   const pending = await db.application.findMany({
     where: {
       status: "APPLIED",
-      createdAt: { lt: dueSoonBefore },
-      OR: [{ reminderSentAt: null }, { createdAt: { lt: overdueBefore }, overdueAlertSentAt: null }],
+      createdAt: { lt: earlyBefore },
+      OR: [{ earlyReminderSentAt: null }, { reminderSentAt: null }, { overdueAlertSentAt: null }],
       job: { recruiter: { user: { status: "ACTIVE" } } },
     },
     include: {
@@ -52,47 +51,37 @@ export async function GET(request: Request) {
   });
 
   // One email per recruiter covering everything that needs attention.
+  type Pending = (typeof pending)[number];
   const byRecruiter = new Map<
     string,
-    {
-      user: { name: string; email: string };
-      dueSoon: typeof pending;
-      overdue: typeof pending;
-    }
+    { user: { name: string; email: string }; early: Pending[]; dueSoon: Pending[]; overdue: Pending[] }
   >();
   for (const application of pending) {
+    const stage = replyReminderStage(application, now);
+    if (!stage) continue;
     const user = application.job.recruiter.user;
-    const entry = byRecruiter.get(user.id) ?? {
-      user,
-      dueSoon: [],
-      overdue: [],
-    };
-    if (application.createdAt < overdueBefore) {
-      if (!application.overdueAlertSentAt) entry.overdue.push(application);
-    } else if (!application.reminderSentAt) {
-      entry.dueSoon.push(application);
-    }
+    const entry = byRecruiter.get(user.id) ?? { user, early: [], dueSoon: [], overdue: [] };
+    entry[stage].push(application);
     byRecruiter.set(user.id, entry);
   }
 
   let sent = 0;
-  for (const { user, dueSoon, overdue } of byRecruiter.values()) {
-    if (dueSoon.length + overdue.length === 0) continue;
-    const line = (a: (typeof pending)[number]) =>
+  for (const { user, early, dueSoon, overdue } of byRecruiter.values()) {
+    const line = (a: Pending) =>
       `${a.candidate.user.name} — ${a.job.title} (due ${formatDateTime(responseDueAt(a.createdAt))})`;
     const ok = await sendEmail({
       to: user.email,
-      ...emails.responseReminder(user.name, dueSoon.map(line), overdue.map(line)),
+      ...emails.responseReminder(user.name, early.map(line), dueSoon.map(line), overdue.map(line)),
     });
     if (!ok) continue;
     sent += 1;
+    // Later stages also mark the earlier ones as done, so a missed early reminder is never sent late.
+    const ids = (list: Pending[]) => ({ id: { in: list.map((a) => a.id) } });
+    await db.application.updateMany({ where: ids(early), data: { earlyReminderSentAt: now } });
+    await db.application.updateMany({ where: ids(dueSoon), data: { reminderSentAt: now, earlyReminderSentAt: now } });
     await db.application.updateMany({
-      where: { id: { in: dueSoon.map((a) => a.id) } },
-      data: { reminderSentAt: now },
-    });
-    await db.application.updateMany({
-      where: { id: { in: overdue.map((a) => a.id) } },
-      data: { overdueAlertSentAt: now, reminderSentAt: now },
+      where: ids(overdue),
+      data: { overdueAlertSentAt: now, reminderSentAt: now, earlyReminderSentAt: now },
     });
   }
 

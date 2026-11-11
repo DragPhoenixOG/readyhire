@@ -46,3 +46,24 @@ export function responseStats(applications: ResponseFacts[], now = new Date()) {
     avgHours: responded.length ? totalHours / responded.length : null,
   };
 }
+
+export type ReplyReminderStage = "early" | "dueSoon" | "overdue";
+
+type ReminderFacts = {
+  createdAt: Date;
+  earlyReminderSentAt: Date | null;
+  reminderSentAt: Date | null;
+  overdueAlertSentAt: Date | null;
+};
+
+/**
+ * The reply reminder an unanswered application needs now, if any: 48 hours left, 24 hours left, then overdue.
+ * Each is sent at most once, and a later one supersedes an earlier one that was missed.
+ */
+export function replyReminderStage(a: ReminderFacts, now = new Date()): ReplyReminderStage | null {
+  const waited = hoursSince(a.createdAt, now);
+  if (waited >= RESPONSE_SLA_HOURS) return a.overdueAlertSentAt ? null : "overdue";
+  if (waited >= RESPONSE_SLA_HOURS - 24) return a.reminderSentAt ? null : "dueSoon";
+  if (waited >= RESPONSE_SLA_HOURS - 48) return a.earlyReminderSentAt || a.reminderSentAt ? null : "early";
+  return null;
+}

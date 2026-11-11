@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { responseDueAt, responseStats } from "@/lib/jobs";
+import { replyReminderStage, responseDueAt, responseStats } from "@/lib/jobs";
 
 const now = new Date("2026-10-25T12:00:00.000Z");
 const hoursAgo = (h: number) => new Date(now.getTime() - h * 60 * 60 * 1000);
@@ -27,5 +27,27 @@ describe("responseStats", () => {
 
   it("has no average before any reply", () => {
     expect(responseStats([], now).avgHours).toBeNull();
+  });
+});
+
+describe("replyReminderStage", () => {
+  type Sent = { earlyReminderSentAt: Date | null; reminderSentAt: Date | null; overdueAlertSentAt: Date | null };
+  const unsent: Sent = { earlyReminderSentAt: null, reminderSentAt: null, overdueAlertSentAt: null };
+  const at = (hours: number, sent: Partial<Sent> = {}) =>
+    replyReminderStage({ createdAt: hoursAgo(hours), ...unsent, ...sent }, now);
+
+  it("waits a day, then sends 48-hours-left, 24-hours-left and overdue reminders once each", () => {
+    expect(at(10)).toBeNull();
+    expect(at(25)).toBe("early");
+    expect(at(25, { earlyReminderSentAt: now })).toBeNull();
+    expect(at(50, { earlyReminderSentAt: now })).toBe("dueSoon");
+    expect(at(50, { reminderSentAt: now })).toBeNull();
+    expect(at(80, { reminderSentAt: now })).toBe("overdue");
+    expect(at(80, { overdueAlertSentAt: now })).toBeNull();
+  });
+
+  it("skips straight to the current stage when earlier ones were missed", () => {
+    expect(at(50)).toBe("dueSoon");
+    expect(at(80)).toBe("overdue");
   });
 });

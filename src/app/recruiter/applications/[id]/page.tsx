@@ -11,6 +11,7 @@ import {
 } from "@/actions/recruiter";
 import { ActionForm } from "@/components/action-form";
 import { CandidateSignals } from "@/components/candidate-signals";
+import { DraftWithAi } from "@/components/draft-with-ai";
 import { InterviewList } from "@/components/interview-list";
 import { ResumeLink } from "@/components/resume-link";
 import { ApplicationStatusBadge, ReportStatusBadge } from "@/components/status";
@@ -29,6 +30,7 @@ import {
   VERIFICATION_METHOD_LABEL,
 } from "@/lib/constants";
 import { db } from "@/lib/db";
+import { aiDriver } from "@/lib/env";
 import { formatDate, formatDateTime, formatLpa, toDateInputValue } from "@/lib/format";
 import { responseDueAt } from "@/lib/jobs";
 
@@ -58,6 +60,7 @@ export default async function RecruiterApplicationPage({ params }: PageProps<"/r
   const isOpen = OPEN_APPLICATION_STATUSES.includes(status);
   const due = responseDueAt(application.createdAt);
   const overdue = status === "APPLIED" && due < new Date();
+  const aiDrafts = aiDriver() !== "off";
 
   return (
     <>
@@ -90,6 +93,7 @@ export default async function RecruiterApplicationPage({ params }: PageProps<"/r
                   <p className="mb-3 font-medium text-emerald-800">Accept</p>
                   <ActionForm action={acceptApplication} submitLabel="Accept application">
                     <input type="hidden" name="applicationId" value={application.id} />
+                    {aiDrafts && <DraftWithAi applicationId={application.id} kind="accept" field="message" />}
                     <Field
                       label="Message to the candidate"
                       htmlFor="accept-message"
@@ -108,7 +112,7 @@ export default async function RecruiterApplicationPage({ params }: PageProps<"/r
                 </div>
                 <div className="rounded-lg border border-rose-200 p-4">
                   <p className="mb-3 font-medium text-rose-800">Reject</p>
-                  <RejectForm applicationId={application.id} />
+                  <RejectForm applicationId={application.id} draft={aiDrafts} />
                 </div>
               </div>
             </Card>
@@ -417,7 +421,7 @@ export default async function RecruiterApplicationPage({ params }: PageProps<"/r
   );
 }
 
-function RejectForm({ applicationId }: { applicationId: string }) {
+function RejectForm({ applicationId, draft = false }: { applicationId: string; draft?: boolean }) {
   return (
     <ActionForm
       action={rejectApplication}
@@ -426,6 +430,7 @@ function RejectForm({ applicationId }: { applicationId: string }) {
       confirm="Reject this application? The candidate will see your reason."
     >
       <input type="hidden" name="applicationId" value={applicationId} />
+      {draft && <DraftWithAi applicationId={applicationId} kind="reject" field="reason" categoryField="category" />}
       <Field label="Reason" htmlFor={`category-${applicationId}`}>
         <select id={`category-${applicationId}`} name="category" required defaultValue="" className={inputClass}>
           <option value="" disabled>

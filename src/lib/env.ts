@@ -36,6 +36,12 @@ const schema = z
 
     /** Bearer token that scheduled jobs (Vercel Cron) must send. */
     CRON_SECRET: z.string().optional(),
+
+    /** AI drafting: "anthropic" (Claude API), "template" (offline drafts) or "off". See aiDriver(). */
+    AI_DRIVER: z.enum(["anthropic", "template", "off"]).optional(),
+    ANTHROPIC_API_KEY: z.string().optional(),
+    AI_MODEL: z.string().default("claude-opus-5-5"),
+    AI_EFFORT: z.enum(["low", "medium", "high"]).default("low"),
     SHOW_DEMO_ACCOUNTS: bool,
   })
   .superRefine((env, ctx) => {
@@ -49,6 +55,8 @@ const schema = z
     if (env.EMAIL_DRIVER === "resend" && !env.RESEND_API_KEY)
       issue("RESEND_API_KEY", "is required when EMAIL_DRIVER=resend");
     if (env.EMAIL_DRIVER === "smtp" && !env.SMTP_URL) issue("SMTP_URL", "is required when EMAIL_DRIVER=smtp");
+    if (env.AI_DRIVER === "anthropic" && !env.ANTHROPIC_API_KEY)
+      issue("ANTHROPIC_API_KEY", "is required when AI_DRIVER=anthropic");
 
     if (env.APP_ENV === "production" || env.APP_ENV === "staging") {
       if (!env.AUTH_SECRET || env.AUTH_SECRET.length < 32) issue("AUTH_SECRET", "must be at least 32 characters");
@@ -91,3 +99,6 @@ export const env = new Proxy({} as Env, {
 });
 
 export const isProductionLike = () => env.APP_ENV === "production" || env.APP_ENV === "staging";
+
+/** AI drafting is offline by default in development and tests, and off in production until configured. */
+export const aiDriver = () => env.AI_DRIVER ?? (isProductionLike() ? "off" : "template");
